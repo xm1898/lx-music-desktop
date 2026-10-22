@@ -159,6 +159,13 @@ const modules = {
     account_playlists: 'account_playlists',
     account_playlist_songs: 'account_playlist_songs',
     account_daily_songs: 'account_daily_songs',
+    account_playlist_create: 'account_playlist_create',
+    account_playlist_update: 'account_playlist_update',
+    account_playlist_delete: 'account_playlist_delete',
+    account_playlist_tracks_add: 'account_playlist_tracks_add',
+    account_playlist_tracks_remove: 'account_playlist_tracks_remove',
+    account_song_like: 'account_song_like',
+    account_search: 'account_search',
   },
   winLyric: {
     close: 'close',

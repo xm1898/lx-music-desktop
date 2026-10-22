@@ -885,3 +885,30 @@ export const getAccountPlaylistSongs = async(accountId: string, playlistId: stri
 export const getAccountDailySongs = async(accountId: string) => {
   return rendererInvoke<string, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_daily_songs, accountId)
 }
+export const createAccountPlaylist = async(request: LX.Account.PlaylistCreateRequest) => {
+  return rendererInvoke<LX.Account.PlaylistCreateRequest, string>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_create, request)
+}
+export const updateAccountPlaylist = async(request: LX.Account.PlaylistUpdateRequest) => {
+  await rendererInvoke<LX.Account.PlaylistUpdateRequest>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_update, request)
+}
+export const deleteAccountPlaylist = async(request: LX.Account.PlaylistUpdateRequest) => {
+  await rendererInvoke<LX.Account.PlaylistUpdateRequest>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_delete, request)
+}
+export const addAccountPlaylistTracks = async(request: LX.Account.PlaylistTracksRequest) => {
+  return rendererInvoke<LX.Account.PlaylistTracksRequest, LX.Account.WriteResult>(
+    WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_tracks_add,
+    request,
+  )
+}
+export const removeAccountPlaylistTracks = async(request: LX.Account.PlaylistTracksRequest) => {
+  return rendererInvoke<LX.Account.PlaylistTracksRequest, LX.Account.WriteResult>(
+    WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_tracks_remove,
+    request,
+  )
+}
+export const likeAccountSongs = async(request: LX.Account.SongLikeRequest) => {
+  return rendererInvoke<LX.Account.SongLikeRequest, LX.Account.WriteResult>(WIN_MAIN_RENDERER_EVENT_NAME.account_song_like, request)
+}
+export const searchAccountSongs = async(request: LX.Account.SongSearchRequest) => {
+  return rendererInvoke<LX.Account.SongSearchRequest, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_search, request)
+}

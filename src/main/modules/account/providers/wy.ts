@@ -247,6 +247,12 @@ const getRequestError = (message: string | undefined, fallback: string, statusCo
   return message ?? `${fallback}（HTTP ${statusCode ?? 0}，code ${code}）`
 }
 
+const assertOk = (body: { code: number, message?: string, msg?: string }, fallback: string, statusCode: number | undefined) => {
+  if (statusCode !== 200 || body.code !== 200) {
+    throw new Error(getRequestError(body.message ?? body.msg, fallback, statusCode, body.code))
+  }
+}
+
 export const getUserPlaylists = async(sessionValue: LX.Account.LoginSession | null): Promise<LX.Account.PlaylistInfo[]> => {
   const session = requireSession(sessionValue)
   const response = await eapiPost<{ code: number, message?: string, playlist?: any[] }>(
@@ -267,6 +273,7 @@ export const getUserPlaylists = async(sessionValue: LX.Account.LoginSession | nu
     source: 'wy' as const,
     total: String(item.trackCount ?? 0),
     isEditable: String(item.creator?.userId ?? '') === session.tokens.userId,
+    specialType: Number(item.specialType ?? 0),
   }))
 }
 
@@ -322,4 +329,139 @@ export const getDailySongs = async(sessionValue: LX.Account.LoginSession | null)
   const ids = (response.body.data?.dailySongs ?? []).map(item => String(item.id))
   if (!ids.length) return []
   return getSongDetails(ids, session.cookies)
+}
+
+const WRITE_BATCH_SIZE = 500
+
+const chunk = <T>(list: T[], size: number): T[][] => {
+  const result: T[][] = []
+  for (let index = 0; index < list.length; index += size) result.push(list.slice(index, index + size))
+  return result
+}
+
+/** 搜索网易云歌曲，用于把本地曲目匹配成平台曲目 id */
+export const searchSongs = async(sessionValue: LX.Account.LoginSession | null, keyword: string, limit = 30): Promise<LX.Music.MusicInfoOnline[]> => {
+  const session = requireSession(sessionValue)
+  const text = keyword.trim()
+  if (!text) return []
+  const response = await eapiPost<{ code: number, message?: string, result?: { songs?: SongRaw[] } }>(
+    '/api/cloudsearch/pc',
+    { s: text, type: 1, limit, offset: 0, total: true },
+    session.cookies,
+  )
+  assertOk(response.body, '搜索歌曲失败', response.statusCode)
+  return (response.body.result?.songs ?? []).map(toMusicInfo).filter(item => item.name)
+}
+
+/** 新建歌单，返回新歌单 id */
+export const createPlaylist = async(sessionValue: LX.Account.LoginSession | null, name: string, privacy = 0): Promise<string> => {
+  const session = requireSession(sessionValue)
+  const response = await eapiPost<{ code: number, message?: string, id?: number | string, playlist?: { id?: number | string } }>(
+    '/api/playlist/create',
+    { name: name.trim(), privacy, type: 'NORMAL' },
+    session.cookies,
+  )
+  assertOk(response.body, '新建歌单失败', response.statusCode)
+  const id = response.body.id ?? response.body.playlist?.id
+  if (!id) throw new Error('新建歌单失败：平台未返回歌单 id')
+  return String(id)
+}
+
+export const renamePlaylist = async(sessionValue: LX.Account.LoginSession | null, playlistId: string, name: string): Promise<void> => {
+  const session = requireSession(sessionValue)
+  const response = await eapiPost<{ code: number, message?: string }>(
+    '/api/playlist/update/name',
+    { id: playlistId, name: name.trim() },
+    session.cookies,
+  )
+  assertOk(response.body, '重命名歌单失败', response.statusCode)
+}
+
+export const updatePlaylistDesc = async(sessionValue: LX.Account.LoginSession | null, playlistId: string, desc: string): Promise<void> => {
+  const session = requireSession(sessionValue)
+  const response = await eapiPost<{ code: number, message?: string }>(
+    '/api/playlist/desc/update',
+    { id: playlistId, desc },
+    session.cookies,
+  )
+  assertOk(response.body, '修改歌单简介失败', response.statusCode)
+}
+
+export const deletePlaylist = async(sessionValue: LX.Account.LoginSession | null, playlistId: string): Promise<void> => {
+  const session = requireSession(sessionValue)
+  const response = await eapiPost<{ code: number, message?: string }>(
+    '/api/playlist/remove',
+    { ids: JSON.stringify([playlistId]) },
+    session.cookies,
+  )
+  assertOk(response.body, '删除歌单失败', response.statusCode)
+}
+
+const manipulateTracks = async(
+  session: LX.Account.LoginSession,
+  playlistId: string,
+  songIds: string[],
+  op: 'add' | 'del',
+): Promise<LX.Account.WriteResult> => {
+  const ids = [...new Set(songIds.map(id => String(id).trim()).filter(id => /^\d+$/.test(id)))]
+  if (!ids.length) throw new Error('没有可写入的歌曲')
+  let success = 0
+  let failed = 0
+  let lastError = ''
+  for (const batch of chunk(ids, WRITE_BATCH_SIZE)) {
+    try {
+      const response = await eapiPost<{ code: number, message?: string, trackIds?: unknown[] }>(
+        '/api/playlist/manipulate/tracks',
+        { op, pid: playlistId, trackIds: JSON.stringify(batch.map(Number)), imme: 'true' },
+        session.cookies,
+      )
+      if (response.statusCode !== 200 || response.body.code !== 200) {
+        lastError = getRequestError(response.body.message, op === 'add' ? '添加歌曲失败' : '移除歌曲失败', response.statusCode, response.body.code)
+        failed += batch.length
+        continue
+      }
+      success += batch.length
+    } catch (err: any) {
+      lastError = err.message ?? String(err)
+      failed += batch.length
+    }
+  }
+  return { success, failed, message: lastError || undefined }
+}
+
+export const addPlaylistTracks = async(sessionValue: LX.Account.LoginSession | null, playlistId: string, songIds: string[]) => {
+  return manipulateTracks(requireSession(sessionValue), playlistId, songIds, 'add')
+}
+
+export const removePlaylistTracks = async(sessionValue: LX.Account.LoginSession | null, playlistId: string, songIds: string[]) => {
+  return manipulateTracks(requireSession(sessionValue), playlistId, songIds, 'del')
+}
+
+/** 喜欢 / 取消喜欢（写入「我喜欢的音乐」） */
+export const likeSongs = async(sessionValue: LX.Account.LoginSession | null, songIds: string[], like: boolean): Promise<LX.Account.WriteResult> => {
+  const session = requireSession(sessionValue)
+  const ids = [...new Set(songIds.map(id => String(id).trim()).filter(id => /^\d+$/.test(id)))]
+  if (!ids.length) throw new Error('没有可操作的歌曲')
+  let success = 0
+  let failed = 0
+  let lastError = ''
+  for (const id of ids) {
+    try {
+      const response = await eapiPost<{ code: number, message?: string }>(
+        '/api/song/like',
+        { trackId: id, like: like ? 'true' : 'false', alg: 'itembased', time: '3' },
+        session.cookies,
+      )
+      if (response.statusCode !== 200 || response.body.code !== 200) {
+        lastError = getRequestError(response.body.message, like ? '收藏失败' : '取消收藏失败', response.statusCode, response.body.code)
+        failed++
+        continue
+      }
+      success++
+    } catch (err: any) {
+      lastError = err.message ?? String(err)
+      failed++
+    }
+  }
+  return { success, failed, message: lastError || undefined }
 }

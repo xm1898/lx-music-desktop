@@ -53,6 +53,46 @@ declare namespace LX {
       source: Source
       total: string
       isEditable: boolean
+      /** 平台特殊歌单类型，网易云 5 = 我喜欢的音乐 */
+      specialType?: number
+    }
+
+    interface PlaylistCreateRequest {
+      accountId: string
+      name: string
+      privacy?: number
+    }
+
+    interface PlaylistUpdateRequest {
+      accountId: string
+      playlistId: string
+      name?: string
+      desc?: string
+    }
+
+    interface PlaylistTracksRequest {
+      accountId: string
+      playlistId: string
+      songIds: string[]
+    }
+
+    interface SongLikeRequest {
+      accountId: string
+      songIds: string[]
+      like: boolean
+    }
+
+    interface SongSearchRequest {
+      accountId: string
+      keyword: string
+      limit?: number
+    }
+
+    /** 歌曲写入结果：成功数 / 失败数 */
+    interface WriteResult {
+      success: number
+      failed: number
+      message?: string
     }
   }
 }

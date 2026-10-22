@@ -64,4 +64,47 @@ export default () => {
     if (!session) throw new Error('账号登录状态不存在或已失效')
     return providers[session.source].getDailySongs(session)
   })
+
+  const requireSession = (accountId: string): LX.Account.LoginSession => {
+    const session = sessions.getSession(accountId)
+    if (!session) throw new Error('账号登录状态不存在或已失效')
+    return session
+  }
+
+  mainHandle<LX.Account.PlaylistCreateRequest, string>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_create, async({ params }) => {
+    const session = requireSession(params.accountId)
+    return providers[session.source].createPlaylist(session, params.name, params.privacy)
+  })
+
+  mainHandle<LX.Account.PlaylistUpdateRequest>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_update, async({ params }) => {
+    const session = requireSession(params.accountId)
+    const provider = providers[session.source]
+    if (params.name != null) await provider.renamePlaylist(session, params.playlistId, params.name)
+    if (params.desc != null) await provider.updatePlaylistDesc(session, params.playlistId, params.desc)
+  })
+
+  mainHandle<LX.Account.PlaylistUpdateRequest>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_delete, async({ params }) => {
+    const session = requireSession(params.accountId)
+    await providers[session.source].deletePlaylist(session, params.playlistId)
+  })
+
+  mainHandle<LX.Account.PlaylistTracksRequest, LX.Account.WriteResult>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_tracks_add, async({ params }) => {
+    const session = requireSession(params.accountId)
+    return providers[session.source].addPlaylistTracks(session, params.playlistId, params.songIds)
+  })
+
+  mainHandle<LX.Account.PlaylistTracksRequest, LX.Account.WriteResult>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_tracks_remove, async({ params }) => {
+    const session = requireSession(params.accountId)
+    return providers[session.source].removePlaylistTracks(session, params.playlistId, params.songIds)
+  })
+
+  mainHandle<LX.Account.SongLikeRequest, LX.Account.WriteResult>(WIN_MAIN_RENDERER_EVENT_NAME.account_song_like, async({ params }) => {
+    const session = requireSession(params.accountId)
+    return providers[session.source].likeSongs(session, params.songIds, params.like)
+  })
+
+  mainHandle<LX.Account.SongSearchRequest, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_search, async({ params }) => {
+    const session = requireSession(params.accountId)
+    return providers[session.source].searchSongs(session, params.keyword, params.limit)
+  })
 }
