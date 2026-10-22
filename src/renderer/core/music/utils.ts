@@ -11,6 +11,8 @@ import { appSetting } from '@renderer/store/setting'
 import { langS2T, toNewMusicInfo, toOldMusicInfo } from '@renderer/utils'
 import { requestMsg } from '@renderer/utils/message'
 import { apis } from '@renderer/utils/musicSdk/api-source'
+import { getQualityFallbackChain } from './qualityFallback'
+import { isSourceCoolingDown, recordSourceFailure, recordSourceSuccess } from './sourceHealth'
 
 
 const getOtherSourcePromises = new Map()
@@ -234,6 +236,61 @@ export const getPlayQuality = (highQuality: LX.Quality, musicInfo: LX.Music.Musi
   return type
 }
 
+/**
+ * 判断某个音质档位在该音源上是否可用
+ * @param musicInfo 歌曲信息
+ * @param quality 音质
+ */
+const isQualityAvailable = (musicInfo: LX.Music.MusicInfoOnline, quality: LX.Quality): boolean => {
+  const list = qualityList.value[musicInfo.source]
+  // 音源没有声明音质列表时不做过滤，交给音源自身判断
+  if (!list?.length) return true
+  return !!musicInfo.meta._qualitys[quality] && list.includes(quality)
+}
+
+/**
+ * 按音质链依次尝试获取播放链接
+ *
+ * 同一音源内先按「高 → 低」降级重试，只有整条链都失败才认为该音源不可用。
+ * 若连续两次失败的错误信息完全一致，判定为该音源级故障，提前结束降级，避免无谓等待。
+ * @param musicInfo 歌曲信息
+ * @param qualitys 音质尝试链
+ */
+const getMusicUrlWithQualityFallback = async(musicInfo: LX.Music.MusicInfoOnline, qualitys: LX.Quality[]): Promise<{ url: string, quality: LX.Quality }> => {
+  let lastError: any
+  let prevErrorMsg = ''
+  let sameErrorCount = 0
+
+  for (const quality of qualitys) {
+    let reqPromise
+    try {
+      reqPromise = musicSdk[musicInfo.source].getMusicUrl(toOldMusicInfo(musicInfo), quality).promise
+    } catch (err: any) {
+      reqPromise = Promise.reject(err)
+    }
+
+    try {
+      const { url, type } = await reqPromise as { url: string, type: LX.Quality }
+      if (qualitys.length > 1 && quality != qualitys[0]) console.log(`[quality-fallback] ${musicInfo.source} 降级到 ${quality} 成功`)
+      return { url, quality: type ?? quality }
+    } catch (err: any) {
+      if (err?.message == requestMsg.tooManyRequests) throw err
+      lastError = err
+      const msg = err?.message ?? ''
+      if (msg && msg == prevErrorMsg) {
+        sameErrorCount++
+        if (sameErrorCount >= 2) throw err
+      } else {
+        prevErrorMsg = msg
+        sameErrorCount = 0
+      }
+      if (qualitys.length > 1) console.log(`[quality-fallback] ${musicInfo.source} ${quality} 失败：`, msg)
+    }
+  }
+
+  throw lastError ?? new Error('failed')
+}
+
 export const getOnlineOtherSourceMusicUrl = async({ musicInfos, quality, onToggleSource, isRefresh, retryedSource = [] }: {
   musicInfos: LX.Music.MusicInfoOnline[]
   quality?: LX.Quality
@@ -248,41 +305,41 @@ export const getOnlineOtherSourceMusicUrl = async({ musicInfos, quality, onToggl
 }> => {
   if (!await window.lx.apiInitPromise[0]) throw new Error('source init failed')
 
-  let musicInfo: LX.Music.MusicInfoOnline | null = null
-  let itemQuality: LX.Quality | null = null
-  // eslint-disable-next-line no-cond-assign
-  while (musicInfo = (musicInfos.shift()!)) {
-    if (retryedSource.includes(musicInfo.source)) continue
+  const candidates = musicInfos.filter(musicInfo => !retryedSource.includes(musicInfo.source) && assertApiSupport(musicInfo.source))
+  if (!candidates.length) throw new Error(window.i18n.t('toggle_source_failed'))
+
+  // 优先跳过处于冷却期的音源，全部冷却时退回完整列表
+  const usableCandidates = appSetting['player.sourceCooldown'] ? candidates.filter(musicInfo => !isSourceCoolingDown(musicInfo.source)) : candidates
+  const tryList = usableCandidates.length ? usableCandidates : candidates
+
+  let lastError: any
+  for (const musicInfo of tryList) {
     retryedSource.push(musicInfo.source)
-    if (!assertApiSupport(musicInfo.source)) continue
-    itemQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
-    if (!musicInfo.meta._qualitys[itemQuality]) continue
+
+    const preferredQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
+    let tryQualitys = appSetting['player.qualityFallback'] ? getQualityFallbackChain(preferredQuality) : [preferredQuality]
+    tryQualitys = tryQualitys.filter(q => isQualityAvailable(musicInfo, q))
+    if (!tryQualitys.length) tryQualitys = [preferredQuality]
 
     console.log('try toggle to: ', musicInfo.source, musicInfo.name, musicInfo.singer, musicInfo.interval)
     onToggleSource(musicInfo)
-    break
-  }
-  if (!musicInfo || !itemQuality) throw new Error(window.i18n.t('toggle_source_failed'))
 
-  const cachedUrl = await getStoreMusicUrl(musicInfo, itemQuality)
-  if (cachedUrl && !isRefresh) return { url: cachedUrl, musicInfo, quality: itemQuality, isFromCache: true }
+    const cachedUrl = await getStoreMusicUrl(musicInfo, tryQualitys[0])
+    if (cachedUrl && !isRefresh) return { url: cachedUrl, musicInfo, quality: tryQualitys[0], isFromCache: true }
 
-  let reqPromise
-  try {
-    reqPromise = musicSdk[musicInfo.source].getMusicUrl(toOldMusicInfo(musicInfo), itemQuality).promise
-  } catch (err: any) {
-    reqPromise = Promise.reject(err)
+    try {
+      const result = await getMusicUrlWithQualityFallback(musicInfo, tryQualitys)
+      recordSourceSuccess(musicInfo.source)
+      return { musicInfo, url: result.url, quality: result.quality, isFromCache: false }
+    } catch (err: any) {
+      if (err?.message == requestMsg.tooManyRequests) throw err
+      console.log(err)
+      recordSourceFailure(musicInfo.source)
+      lastError = err
+    }
   }
-  // retryedSource.includes(musicInfo.source)
-  // eslint-disable-next-line @typescript-eslint/promise-function-async
-  return reqPromise.then(({ url, type }: { url: string, type: LX.Quality }) => {
-    return { musicInfo, url, quality: type, isFromCache: false }
-    // eslint-disable-next-line @typescript-eslint/promise-function-async
-  }).catch((err: any) => {
-    if (err.message == requestMsg.tooManyRequests) throw err
-    console.log(err)
-    return getOnlineOtherSourceMusicUrl({ musicInfos, quality, onToggleSource, isRefresh, retryedSource })
-  })
+
+  throw lastError ?? new Error(window.i18n.t('toggle_source_failed'))
 }
 
 /**
@@ -304,33 +361,35 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
   // console.log(musicInfo.source)
   const targetQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
 
-  let reqPromise
+  // 首选音质不可用时按音质链降级，避免直接跳到换源
+  let tryQualitys = appSetting['player.qualityFallback'] ? getQualityFallbackChain(targetQuality) : [targetQuality]
+  tryQualitys = tryQualitys.filter(q => isQualityAvailable(musicInfo, q))
+  if (!tryQualitys.length) tryQualitys = [targetQuality]
+
   try {
-    reqPromise = musicSdk[musicInfo.source].getMusicUrl(toOldMusicInfo(musicInfo), targetQuality).promise
+    const result = await getMusicUrlWithQualityFallback(musicInfo, tryQualitys)
+    recordSourceSuccess(musicInfo.source)
+    return { musicInfo, url: result.url, quality: result.quality, isFromCache: false }
   } catch (err: any) {
-    reqPromise = Promise.reject(err)
-  }
-  return reqPromise.then(({ url, type }: { url: string, type: LX.Quality }) => {
-    return { musicInfo, url, quality: type, isFromCache: false }
-  }).catch(async(err: any) => {
     console.log(err)
-    if (!allowToggleSource || err.message == requestMsg.tooManyRequests) throw err
+    if (err?.message == requestMsg.tooManyRequests) throw err
+    recordSourceFailure(musicInfo.source)
+    if (!allowToggleSource) throw err
     onToggleSource()
-    // eslint-disable-next-line @typescript-eslint/promise-function-async
-    return getOtherSource(musicInfo).then(otherSource => {
-      console.log('find otherSource', otherSource)
-      if (otherSource.length) {
-        return getOnlineOtherSourceMusicUrl({
-          musicInfos: [...otherSource],
-          onToggleSource,
-          quality,
-          isRefresh,
-          retryedSource: [musicInfo.source],
-        })
-      }
-      throw err
-    })
-  })
+
+    const otherSource = await getOtherSource(musicInfo)
+    console.log('find otherSource', otherSource)
+    if (otherSource.length) {
+      return getOnlineOtherSourceMusicUrl({
+        musicInfos: [...otherSource],
+        onToggleSource,
+        quality,
+        isRefresh,
+        retryedSource: [musicInfo.source],
+      })
+    }
+    throw err
+  }
 }
 
 

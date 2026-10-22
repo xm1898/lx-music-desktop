@@ -19,6 +19,12 @@ dd
   .gap-top
     base-checkbox(id="setting_player_auto_skip_on_error" :model-value="appSetting['player.autoSkipOnError']" :label="$t('setting__play_auto_skip_on_error')" @update:model-value="updateSetting({'player.autoSkipOnError': $event})")
   .gap-top
+    base-checkbox(id="setting_player_quality_fallback" :model-value="appSetting['player.qualityFallback']" :label="$t('setting__play_quality_fallback')" @update:model-value="updateSetting({'player.qualityFallback': $event})")
+    svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_quality_fallback_tip')")
+  .gap-top
+    base-checkbox(id="setting_player_source_cooldown" :model-value="appSetting['player.sourceCooldown']" :label="$t('setting__play_source_cooldown')" @update:model-value="updateSetting({'player.sourceCooldown': $event})")
+    svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_source_cooldown_tip')")
+  .gap-top
     base-checkbox(id="setting_player_lyric_s2t" :model-value="appSetting['player.isS2t']" :label="$t('setting__play_lyric_s2t')" @update:model-value="updateSetting({'player.isS2t': $event})")
   .gap-top
     base-checkbox(id="setting_player_lyric_play_lxlrc" :model-value="appSetting['player.isPlayLxlrc']" :label="$t('setting__play_lyric_lxlrc')" @update:model-value="updateSetting({'player.isPlayLxlrc': $event})")

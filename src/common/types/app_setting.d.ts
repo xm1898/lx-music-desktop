@@ -285,6 +285,16 @@ declare global {
       'player.autoSkipOnError': boolean
 
       /**
+       * 获取播放链接失败时，是否按音质从高到低自动降级重试
+       */
+      'player.qualityFallback': boolean
+
+      /**
+       * 是否自动跳过近期连续获取播放链接失败的音源（冷却 5 分钟）
+       */
+      'player.sourceCooldown': boolean
+
+      /**
        * 点击相同列表内的歌曲切歌时是否清空已播放列表（随机模式下列表内所有歌曲会重新参与随机）
        */
       'player.isAutoCleanPlayedList': boolean

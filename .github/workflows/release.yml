@@ -1,9 +1,10 @@
 name: Build
 
 on:
-  push:
-    branches:
-      - master
+  # 上游仓库在 push master 时自动发布正式版本。
+  # 个人 fork 没有发布所需的 secrets（BT_TOKEN 等），改为手动触发，
+  # 日常编译验证走 build-fork.yml。
+  workflow_dispatch:
 
 env:
   IS_CI: 'true'

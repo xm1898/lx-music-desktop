@@ -165,3 +165,35 @@
 ---
 
 若对此有疑问请 mail to: lyswhut+qq.com (请将 `+` 替换为 `@`)
+
+---
+
+## 本 fork 的改动
+
+本仓库是 [lx-music-desktop](https://github.com/lyswhut/lx-music-desktop) 的个人 fork，在上游 v2.12.6 基础上补充了播放链路的健壮性改动，其余行为与上游一致。
+
+### 音质降级重试
+
+原先首选音质取不到链接时会直接跳到换源甚至切歌。现在会先在同一音源内按「高 → 低」音质依次重试（`wav/ape → flac24bit → flac → 320k → 192k → 128k`），整条链都失败才换源。
+
+- 实现：`src/renderer/core/music/qualityFallback.ts`
+- 接入：`src/renderer/core/music/utils.ts` 的 `handleGetOnlineMusicUrl` / `getOnlineOtherSourceMusicUrl`
+- 保护：连续两次失败且错误信息完全一致时判定为音源级故障，提前结束降级，不做无谓等待；`服务器繁忙` 与取消请求不参与降级
+
+### 音源熔断
+
+连续两次取不到播放链接的音源会进入 5 分钟冷却期，换源时优先跳过它，冷却结束自动恢复参与。全部音源都在冷却时仍会退回完整列表，不会出现无法换源的情况。
+
+- 实现：`src/renderer/core/music/sourceHealth.ts`
+
+### 开关
+
+设置 → 播放设置：
+
+- `获取链接失败时自动降低音质重试`（`player.qualityFallback`，默认开启）
+- `自动跳过近期失败的音源`（`player.sourceCooldown`，默认开启）
+
+### CI
+
+- `.github/workflows/build-fork.yml`：push 到 master 时执行 lint + 编译，并在 Windows runner 上打出 x64 安装包作为 Artifact
+- `.github/workflows/release.yml`：上游用于自动发布正式版，fork 缺少发布所需的 secrets，已改为手动触发

@@ -46,6 +46,8 @@ const defaultSetting: LX.AppSetting = {
   'player.waitPlayEndStop': true,
   'player.waitPlayEndStopTime': '',
   'player.autoSkipOnError': true,
+  'player.qualityFallback': true,
+  'player.sourceCooldown': true,
   'player.isAutoCleanPlayedList': false,
   'player.soundEffect.convolution.fileName': '',
   'player.soundEffect.convolution.mainGain': 10,
