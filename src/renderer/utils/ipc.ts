@@ -853,3 +853,35 @@ export const downloadTasksRemove = async(ids: string[]) => {
 export const downloadListClear = async() => {
   return rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.download_list_clear)
 }
+
+
+export const getAccounts = async() => {
+  return rendererInvoke<LX.Account.PlatformAccount[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_list)
+}
+export const removeAccount = async(id: string) => {
+  await rendererInvoke<string>(WIN_MAIN_RENDERER_EVENT_NAME.account_remove, id)
+}
+export const loginAccountByCookie = async(request: LX.Account.LoginRequest) => {
+  return rendererInvoke<LX.Account.LoginRequest, LX.Account.PlatformAccount>(WIN_MAIN_RENDERER_EVENT_NAME.account_login, request)
+}
+export const createAccountQrCode = async(source: LX.Account.Source) => {
+  return rendererInvoke<LX.Account.Source, LX.Account.QrCodeLoginState>(WIN_MAIN_RENDERER_EVENT_NAME.account_qr_create, source)
+}
+export const checkAccountQrCode = async(source: LX.Account.Source, requestId: string) => {
+  return rendererInvoke<{ source: LX.Account.Source, requestId: string }, LX.Account.QrCodeLoginResult>(
+    WIN_MAIN_RENDERER_EVENT_NAME.account_qr_check,
+    { source, requestId },
+  )
+}
+export const getAccountPlaylists = async(accountId: string) => {
+  return rendererInvoke<string, LX.Account.PlaylistInfo[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlists, accountId)
+}
+export const getAccountPlaylistSongs = async(accountId: string, playlistId: string) => {
+  return rendererInvoke<{ accountId: string, playlistId: string }, LX.Music.MusicInfoOnline[]>(
+    WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_songs,
+    { accountId, playlistId },
+  )
+}
+export const getAccountDailySongs = async(accountId: string) => {
+  return rendererInvoke<string, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_daily_songs, accountId)
+}

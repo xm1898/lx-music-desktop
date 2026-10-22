@@ -197,3 +197,23 @@
 
 - `.github/workflows/build-fork.yml`：push 到 master 时执行 lint + 编译，并在 Windows runner 上打出 x64 安装包作为 Artifact
 - `.github/workflows/release.yml`：上游用于自动发布正式版，fork 缺少发布所需的 secrets，已改为手动触发
+
+### 网易云账号
+
+设置 → 账号，支持两种登录方式：
+
+- **扫码登录**：走 eapi 二维码协议（`/api/login/qrcode/unikey` + `client/login` 轮询），无需输入密码
+- **Cookie 登录**：粘贴 `music.163.com` 的 Cookie（需含 `MUSIC_U` 或 `MUSIC_A`），登录后校验账号信息
+
+登录后侧边栏出现「平台音乐」页，可查看：
+
+- **我的歌单**（含自建与收藏，按平台返回顺序）
+- **每日推荐**（账号维度的每日推荐歌曲）
+
+歌单和推荐都支持整列表播放，歌曲元数据由 `eapi/v3/song/detail` 批量拉取（每批 500 首），播放链路不变，仍由自定义音源提供地址。
+
+凭证通过 Electron `safeStorage` 加密后写入 `account_sessions.json`；系统安全存储不可用（例如 Linux 无 keyring）时降级为明文并在日志中告警。
+
+**协议说明**：网易云已停用 weapi（请求返回 200 但 body 为空），本项目全部改用 eapi（AES-128-ECB + MD5 摘要签名）。二维码、歌单、歌曲详情、每日推荐四条链路均已实测可用。
+
+**边界**：登录态只用于元数据，不参与播放取链接，因此**不解锁会员音质**，也不读取云盘私密音频。

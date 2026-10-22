@@ -150,6 +150,15 @@ const modules = {
     download_list_update: 'download_list_update',
     download_list_remove: 'download_list_remove',
     download_list_clear: 'download_list_clear',
+
+    account_list: 'account_list',
+    account_remove: 'account_remove',
+    account_login: 'account_login',
+    account_qr_create: 'account_qr_create',
+    account_qr_check: 'account_qr_check',
+    account_playlists: 'account_playlists',
+    account_playlist_songs: 'account_playlist_songs',
+    account_daily_songs: 'account_daily_songs',
   },
   winLyric: {
     close: 'close',

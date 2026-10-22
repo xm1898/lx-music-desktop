@@ -62,6 +62,11 @@ class Store {
     this.writeFile()
   }
 
+  remove(key: string) {
+    Reflect.deleteProperty(this.store, key)
+    this.writeFile()
+  }
+
   override(value: Record<string, any>) {
     this.store = value
     this.writeFile()

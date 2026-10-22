@@ -1,4 +1,5 @@
 import '@common/types/utils'
+import '@common/types/account'
 import '@common/types/app_setting'
 import '@common/types/common'
 import '@common/types/user_api'

@@ -56,6 +56,15 @@ export default {
           enable: true,
         },
         {
+          to: '/platform',
+          tips: t('platform_music'),
+          icon: '#icon-audio-wave',
+          iconSize: '0 0 24 24',
+          size,
+          name: 'PlatformMusic',
+          enable: true,
+        },
+        {
           to: '/list',
           tips: t('my_list'),
           icon: '#icon-love',
