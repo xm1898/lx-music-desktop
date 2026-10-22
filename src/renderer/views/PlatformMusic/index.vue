@@ -130,10 +130,14 @@ import PlaylistEditModal from './components/PlaylistEditModal.vue'
 interface DetailState {
   playlistId?: string
   isEditable: boolean
+  specialType?: number
   name: string
   sub: string
   list: LX.Music.MusicInfoOnline[]
 }
+
+/** 网易云「我喜欢的音乐」specialType = 5，增删必须走 song/like，不能走 playlist/manipulate/tracks */
+const LIKED_PLAYLIST_TYPE = 5
 
 interface EditingState {
   mode: 'create' | 'rename'
@@ -182,7 +186,7 @@ const loadPlaylists = async() => {
 
 const openPlaylist = async(item: LX.Account.PlaylistInfo) => {
   if (!wyAccount.value || isLoading.value) return
-  detail.value = { playlistId: item.id, isEditable: item.isEditable, name: item.name, sub: t('platform_music_total', { count: item.total }), list: [] }
+  detail.value = { playlistId: item.id, isEditable: item.isEditable, specialType: item.specialType, name: item.name, sub: t('platform_music_total', { count: item.total }), list: [] }
   isLoading.value = true
   try {
     const list = await getAccountPlaylistSongs(wyAccount.value.id, item.id)
@@ -190,6 +194,7 @@ const openPlaylist = async(item: LX.Account.PlaylistInfo) => {
       detail.value = {
         playlistId: item.id,
         isEditable: item.isEditable,
+        specialType: item.specialType,
         name: item.name,
         sub: t('platform_music_total', { count: String(list.length) }),
         list,
@@ -314,11 +319,13 @@ const handleAddSongs = async(songIds: string[]) => {
   if (!wyAccount.value || !current?.playlistId || isWriting.value) return
   isWriting.value = true
   try {
-    const result = await addAccountPlaylistTracks({
-      accountId: wyAccount.value.id,
-      playlistId: current.playlistId,
-      songIds,
-    })
+    const result = current.specialType === LIKED_PLAYLIST_TYPE
+      ? await likeAccountSongs({ accountId: wyAccount.value.id, songIds, like: true })
+      : await addAccountPlaylistTracks({
+        accountId: wyAccount.value.id,
+        playlistId: current.playlistId,
+        songIds,
+      })
     picker.value = null
     if (result.failed) {
       showNotice(t('platform_music_add_partial', { success: result.success, failed: result.failed, message: result.message ?? '' }))
@@ -340,11 +347,13 @@ const handleRemove = async(index: number) => {
   if (!wyAccount.value || !current?.playlistId || !song || isWriting.value) return
   isWriting.value = true
   try {
-    const result = await removeAccountPlaylistTracks({
-      accountId: wyAccount.value.id,
-      playlistId: current.playlistId,
-      songIds: [String(song.meta.songId)],
-    })
+    const result = current.specialType === LIKED_PLAYLIST_TYPE
+      ? await likeAccountSongs({ accountId: wyAccount.value.id, songIds: [String(song.meta.songId)], like: false })
+      : await removeAccountPlaylistTracks({
+        accountId: wyAccount.value.id,
+        playlistId: current.playlistId,
+        songIds: [String(song.meta.songId)],
+      })
     if (result.failed) {
       showNotice(t('platform_music_remove_failed', { message: result.message ?? '' }))
       return
