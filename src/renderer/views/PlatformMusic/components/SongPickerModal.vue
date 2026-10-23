@@ -93,6 +93,7 @@ import { ref, computed, watch } from '@common/utils/vueTools'
 import { useI18n } from '@root/lang'
 import { allMusicList, defaultList, loveList, userLists } from '@renderer/store/list/state'
 import { searchAccountSongs } from '@renderer/utils/ipc'
+import { nameScore, singerScore } from '@renderer/utils/musicMatch'
 
 interface LocalRow {
   key: string
@@ -203,23 +204,6 @@ const selectLocalList = (id: string) => {
   matchProgress.value = null
 }
 
-const normalize = (value: string) => (value ?? '').toLowerCase().replace(/[\s\-_()（）[\]【】.,，。·'"!！?？/\\]/g, '')
-
-const nameScore = (a: string, b: string) => {
-  const left = normalize(a)
-  const right = normalize(b)
-  if (!left || !right) return 0
-  if (left === right) return 2
-  if (left.includes(right) || right.includes(left)) return 1.2
-  return 0
-}
-
-const singerScore = (a: string, b: string) => {
-  const left = normalize(a)
-  const right = normalize(b)
-  if (!left || !right) return 0
-  return left === right ? 1 : (left.includes(right) || right.includes(left) ? 0.6 : 0)
-}
 
 const runLimited = async<T>(items: T[], limit: number, worker: (item: T, index: number) => Promise<void>) => {
   let cursor = 0

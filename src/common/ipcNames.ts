@@ -158,6 +158,7 @@ const modules = {
     account_qr_check: 'account_qr_check',
     account_playlists: 'account_playlists',
     account_playlist_songs: 'account_playlist_songs',
+    account_playlist_ids: 'account_playlist_ids',
     account_daily_songs: 'account_daily_songs',
     account_playlist_create: 'account_playlist_create',
     account_playlist_update: 'account_playlist_update',
@@ -166,6 +167,10 @@ const modules = {
     account_playlist_tracks_remove: 'account_playlist_tracks_remove',
     account_song_like: 'account_song_like',
     account_search: 'account_search',
+    account_playlist_bindings: 'account_playlist_bindings',
+    account_playlist_bindings_save: 'account_playlist_bindings_save',
+    account_playlist_bindings_remove: 'account_playlist_bindings_remove',
+    account_play_history: 'account_play_history',
   },
   winLyric: {
     close: 'close',

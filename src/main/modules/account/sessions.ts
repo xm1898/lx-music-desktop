@@ -40,3 +40,15 @@ export const getSessionBySource = (source: LX.Account.Source): LX.Account.LoginS
   const account = accountStore.listAccounts().find(item => item.source === source)
   return account ? getSession(account.id) : null
 }
+
+export const listBindings = (): LX.Account.PlaylistBinding[] => {
+  return accountStore.listBindings()
+}
+
+export const saveBinding = (binding: LX.Account.PlaylistBinding) => {
+  accountStore.saveBinding(binding)
+}
+
+export const removeBinding = (listId: string) => {
+  accountStore.removeBinding(listId)
+}

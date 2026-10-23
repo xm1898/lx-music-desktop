@@ -88,6 +88,29 @@ declare namespace LX {
       limit?: number
     }
 
+    /** 本地列表与平台歌单的同步绑定 */
+    interface PlaylistBinding {
+      /** 本地用户列表 id */
+      listId: string
+      accountId: string
+      /** 平台歌单 id */
+      playlistId: string
+      /** 平台歌单名称快照，用于展示 */
+      playlistName: string
+      /** 上次同步时平台的曲目 id 序列，作为增量对比基准线 */
+      baseLine: string[]
+      lastSyncTime: number
+      /** 开启后本地改动会回传到平台 */
+      enabled: boolean
+    }
+
+    interface PlayHistoryRequest {
+      accountId: string
+      songIds: string[]
+      /** 单曲播放秒数，默认 30 */
+      playTime?: number
+    }
+
     /** 歌曲写入结果：成功数 / 失败数 */
     interface WriteResult {
       success: number

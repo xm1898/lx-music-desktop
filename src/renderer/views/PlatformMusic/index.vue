@@ -16,6 +16,12 @@ div(:class="$style.container")
         :disabled="isLoading || isWriting"
         @click="openPicker"
       ) {{ $t('platform_music_add_songs') }}
+      base-btn(
+        v-if="!detail.playlistId && detail.list.length"
+        min
+        :disabled="isLoading || isWriting"
+        @click="handleSaveDaily"
+      ) {{ $t('platform_music_save_daily') }}
       base-btn(min :disabled="!detail.list.length || isLoading" @click="playAt(0)") {{ $t('platform_music_play_all') }}
     p(v-if="notice" :class="$style.notice") {{ notice }}
     div(:class="$style.songList")
@@ -81,8 +87,26 @@ div(:class="$style.container")
             p(:class="$style.cardName" :title="item.name") {{ item.name }}
             p(:class="$style.cardSub") {{ $t('platform_music_total', { count: item.total }) }}
           div(v-if="item.isEditable && item.specialType !== 5" :class="$style.cardActions")
+            button(type="button" :class="$style.cardBtn" :disabled="isWriting" @click.stop="handleImportLocal(item)") {{ $t('platform_music_import_local') }}
             button(type="button" :class="$style.cardBtn" :disabled="isWriting" @click.stop="openRename(item)") {{ $t('platform_music_playlist_rename') }}
             button(type="button" :class="$style.cardBtn" :disabled="isWriting" @click.stop="handleDeletePlaylist(item)") {{ $t('platform_music_playlist_delete') }}
+    div(:class="$style.section")
+      h3(:class="$style.sectionTitle") {{ $t('platform_music_sync_section') }}
+      p(v-if="!localLists.length" :class="$style.tip") {{ $t('platform_music_sync_empty') }}
+      div(v-else :class="$style.syncList")
+        div(v-for="item in localLists" :key="item.id" :class="$style.syncRow")
+          div(:class="$style.syncInfo")
+            p(:class="$style.syncName" :title="item.name") {{ item.name }}
+            p(:class="$style.syncMeta")
+              span(:class="$style.syncState" :data-state="syncStateOf(item.id)") {{ syncStateLabel(item.id) }}
+              span(v-if="bindingOf(item.id)" :class="$style.syncTime") {{ bindingTimeLabel(bindingOf(item.id)!.lastSyncTime) }}
+          div(:class="$style.syncActions")
+            template(v-if="bindingOf(item.id)")
+              base-btn(min :disabled="isWriting || !bindingOf(item.id)!.enabled" @click="handleSyncNow(item)") {{ $t('platform_music_sync_now') }}
+              base-btn(v-if="syncStateOf(item.id) === 'conflict'" min :disabled="isWriting" @click="handleForcePush(item)") {{ $t('platform_music_sync_conflict_local') }}
+              base-btn(v-if="syncStateOf(item.id) === 'conflict'" min :disabled="isWriting" @click="handleForcePull(item)") {{ $t('platform_music_sync_conflict_platform') }}
+              base-btn(min :disabled="isWriting" @click="handleUnbind(item)") {{ $t('platform_music_sync_unbind') }}
+            base-btn(v-else min :disabled="isWriting" @click="handlePushLocal(item)") {{ $t('platform_music_sync_push_local') }}
 
   SongPickerModal(
     v-if="picker"
@@ -122,6 +146,19 @@ import {
   updateAccountPlaylist,
 } from '@renderer/utils/ipc'
 import { setTempList } from '@renderer/store/list/action'
+import { getUserLists } from '@renderer/store/list/listManage'
+import {
+  bindings,
+  forcePullBinding,
+  forcePushBinding,
+  importPlaylistToLocal,
+  loadBindings,
+  pushLocalListToPlatform,
+  removeBinding,
+  saveDailyToLocal,
+  syncBinding,
+  type SyncResult,
+} from '@renderer/store/playlistSync'
 import { playList } from '@renderer/core/player/action'
 import { loadAccounts, wyAccount } from '@renderer/store/account'
 import SongPickerModal from './components/SongPickerModal.vue'
@@ -155,6 +192,8 @@ const isWriting = ref(false)
 const notice = ref('')
 const picker = ref<{ existingIds: string[] } | null>(null)
 const editing = ref<EditingState | null>(null)
+const localLists = ref<LX.List.UserListInfo[]>([])
+const syncStates = ref<Record<string, SyncResult['outcome']>>({})
 
 const PLATFORM_LIST_ID = 'platform_music'
 let noticeTimer: ReturnType<typeof setTimeout> | null = null
@@ -232,6 +271,166 @@ const openDaily = async() => {
     handleError(err)
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleSaveDaily = async() => {
+  const current = detail.value
+  if (!current || isWriting.value) return
+  isWriting.value = true
+  try {
+    const result = await saveDailyToLocal(wyAccount.value!.id, current.list)
+    showNotice(t('platform_music_daily_saved', { name: current.name }))
+    void result
+    await loadLocalLists()
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
+  }
+}
+
+const loadLocalLists = async() => {
+  try {
+    localLists.value = await getUserLists()
+  } catch {
+    localLists.value = []
+  }
+}
+
+const bindingOf = (listId: string) => bindings.value.find(item => item.listId === listId)
+
+const syncStateOf = (listId: string): SyncResult['outcome'] | 'idle' => {
+  if (!bindingOf(listId)) return 'idle'
+  return syncStates.value[listId] ?? 'no-change'
+}
+
+const syncStateLabel = (listId: string) => {
+  const state = syncStateOf(listId)
+  if (state === 'idle') return t('platform_music_sync_unbound')
+  if (state === 'conflict') return t('platform_music_sync_state_conflict')
+  if (state === 'no-change') return t('platform_music_sync_state_synced')
+  return t('platform_music_sync_state_pending')
+}
+
+const bindingTimeLabel = (time: number) => {
+  if (!time) return t('platform_music_sync_never')
+  const date = new Date(time)
+  return t('platform_music_sync_last', {
+    time: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+  })
+}
+
+const handleImportLocal = async(item: LX.Account.PlaylistInfo) => {
+  if (!wyAccount.value || isWriting.value) return
+  isWriting.value = true
+  try {
+    const result = await importPlaylistToLocal(wyAccount.value.id, item)
+    showNotice(t('platform_music_import_success', { name: item.name, count: String(result.total) }))
+    await loadLocalLists()
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
+  }
+}
+
+const handlePushLocal = async(item: LX.List.UserListInfo) => {
+  if (!wyAccount.value || isWriting.value) return
+  if (!await dialog({
+    message: t('platform_music_sync_push_confirm', { name: item.name }),
+    showCancel: true,
+  })) return
+  isWriting.value = true
+  try {
+    const result = await pushLocalListToPlatform(item.id, wyAccount.value.id)
+    showNotice(result.total
+      ? t('platform_music_sync_push_success', { name: item.name, count: String(result.total) })
+      : t('platform_music_sync_push_partial', { name: item.name, count: '0' }))
+    syncStates.value = { ...syncStates.value, [item.id]: 'no-change' }
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
+  }
+}
+
+const handleSyncNow = async(item: LX.List.UserListInfo) => {
+  if (isWriting.value) return
+  isWriting.value = true
+  try {
+    const result = await syncBinding(item.id)
+    syncStates.value = { ...syncStates.value, [item.id]: result.outcome }
+    showSyncNotice(item.name, result)
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
+  }
+}
+
+const showSyncNotice = (listName: string, result: SyncResult) => {
+  if (result.outcome === 'conflict') {
+    showNotice(result.message ?? t('platform_music_sync_state_conflict'))
+    return
+  }
+  if (result.outcome === 'no-change') {
+    showNotice(t('platform_music_sync_state_synced'))
+    return
+  }
+  if (result.outcome === 'pulled') {
+    showNotice(t('platform_music_import_success', { name: listName, count: String(result.added) }))
+    return
+  }
+  showNotice(t('platform_music_sync_push_success', { name: listName, count: String(result.added) }))
+}
+
+const handleForcePush = async(item: LX.List.UserListInfo) => {
+  if (isWriting.value) return
+  isWriting.value = true
+  try {
+    await forcePushBinding(item.id)
+    syncStates.value = { ...syncStates.value, [item.id]: 'no-change' }
+    showNotice(t('platform_music_sync_state_synced'))
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
+  }
+}
+
+const handleForcePull = async(item: LX.List.UserListInfo) => {
+  if (isWriting.value) return
+  isWriting.value = true
+  try {
+    await forcePullBinding(item.id)
+    syncStates.value = { ...syncStates.value, [item.id]: 'no-change' }
+    showNotice(t('platform_music_sync_state_synced'))
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
+  }
+}
+
+const handleUnbind = async(item: LX.List.UserListInfo) => {
+  const binding = bindingOf(item.id)
+  if (!binding || isWriting.value) return
+  if (!await dialog({
+    message: t('platform_music_sync_unbind_confirm', { name: binding.playlistName }),
+    showCancel: true,
+  })) return
+  isWriting.value = true
+  try {
+    await removeBinding(item.id)
+    const next = { ...syncStates.value }
+    Reflect.deleteProperty(next, item.id)
+    syncStates.value = next
+    showNotice(t('platform_music_sync_unbound'))
+  } catch (err) {
+    handleError(err)
+  } finally {
+    isWriting.value = false
   }
 }
 
@@ -393,6 +592,8 @@ watch(wyAccount, account => {
 
 onMounted(async() => {
   await loadAccounts()
+  await loadBindings()
+  await loadLocalLists()
   if (wyAccount.value) void loadPlaylists()
 })
 
@@ -650,5 +851,53 @@ onBeforeUnmount(() => {
   padding: 16px 0;
   font-size: 12px;
   color: var(--color-font-label);
+}
+.syncList {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 8px;
+}
+.syncRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: @radius-border;
+  background-color: var(--color-primary-light-400-alpha-700);
+}
+.syncInfo {
+  flex: auto;
+  min-width: 0;
+}
+.syncName {
+  font-size: 13px;
+  color: var(--color-font);
+  .mixin-ellipsis-1();
+}
+.syncMeta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-font-label);
+}
+.syncState {
+  padding: 1px 7px;
+  border-radius: 8px;
+  &[data-state='conflict'] {
+    color: var(--color-primary);
+    background-color: var(--color-primary-light-300-alpha-700);
+  }
+}
+.syncTime {
+  .mixin-ellipsis-1();
+}
+.syncActions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 </style>

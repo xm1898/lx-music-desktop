@@ -3,6 +3,7 @@ import { STORE_NAMES } from '@common/constants'
 import getStore from '@main/utils/store'
 
 const ACCOUNTS_KEY = 'accounts'
+const BINDINGS_KEY = 'playlist_bindings'
 
 let accountStore: ReturnType<typeof getStore> | null = null
 const getAccountStore = () => {
@@ -44,6 +45,24 @@ export const removeAccount = (id: string) => {
   const store = getAccountStore()
   store.set(ACCOUNTS_KEY, listAccounts().filter(item => item.id !== id))
   store.remove(`session:${id}`)
+  // 同步绑定一并清理，避免残留指向已删除账号
+  store.set(BINDINGS_KEY, listBindings().filter(item => item.accountId !== id))
+}
+
+export const listBindings = (): LX.Account.PlaylistBinding[] => {
+  return getAccountStore().get<LX.Account.PlaylistBinding[]>(BINDINGS_KEY) ?? []
+}
+
+export const saveBinding = (binding: LX.Account.PlaylistBinding) => {
+  const bindings = listBindings()
+  const index = bindings.findIndex(item => item.listId === binding.listId)
+  if (index > -1) bindings[index] = binding
+  else bindings.push(binding)
+  getAccountStore().set(BINDINGS_KEY, bindings)
+}
+
+export const removeBinding = (listId: string) => {
+  getAccountStore().set(BINDINGS_KEY, listBindings().filter(item => item.listId !== listId))
 }
 
 export const getSession = (id: string): LX.Account.LoginSession | null => {

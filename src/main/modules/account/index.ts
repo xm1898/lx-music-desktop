@@ -59,6 +59,15 @@ export default () => {
     },
   )
 
+  mainHandle<{ accountId: string, playlistId: string }, string[]>(
+    WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_ids,
+    async({ params }) => {
+      const session = sessions.getSession(params.accountId)
+      if (!session) throw new Error('账号登录状态不存在或已失效')
+      return providers[session.source].getPlaylistIds(session, params.playlistId)
+    },
+  )
+
   mainHandle<string, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_daily_songs, async({ params: accountId }) => {
     const session = sessions.getSession(accountId)
     if (!session) throw new Error('账号登录状态不存在或已失效')
@@ -106,5 +115,22 @@ export default () => {
   mainHandle<LX.Account.SongSearchRequest, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_search, async({ params }) => {
     const session = requireSession(params.accountId)
     return providers[session.source].searchSongs(session, params.keyword, params.limit)
+  })
+
+  mainHandle<LX.Account.PlayHistoryRequest, LX.Account.WriteResult>(WIN_MAIN_RENDERER_EVENT_NAME.account_play_history, async({ params }) => {
+    const session = requireSession(params.accountId)
+    return providers[session.source].reportPlayHistory(session, params.songIds, params.playTime)
+  })
+
+  mainHandle(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_bindings, async() => {
+    return sessions.listBindings()
+  })
+
+  mainHandle<LX.Account.PlaylistBinding>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_bindings_save, async({ params }) => {
+    sessions.saveBinding(params)
+  })
+
+  mainHandle<string>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_bindings_remove, async({ params: listId }) => {
+    sessions.removeBinding(listId)
   })
 }

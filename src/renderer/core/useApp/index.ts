@@ -15,6 +15,7 @@ import usePlayer from './usePlayer'
 import useSettingSync from './useSettingSync'
 import { useRouter } from '@common/utils/vueRouter'
 import handleListAutoUpdate from './listAutoUpdate'
+import { loadBindings } from '@renderer/store/playlistSync'
 
 
 export default () => {
@@ -35,6 +36,7 @@ export default () => {
   const initData = useDataInit()
   const initDeeplink = useDeeplink()
   // const handleListAutoUpdate = useListAutoUpdate()
+  void loadBindings()
 
   useUpdate()
   useSettingSync()

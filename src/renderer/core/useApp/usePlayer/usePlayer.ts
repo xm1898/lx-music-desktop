@@ -37,6 +37,7 @@ import useSoundEffect from './useSoundEffect'
 import useMaxOutputChannelCount from './useMaxOutputChannelCount'
 import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import usePreloadNextMusic from './usePreloadNextMusic'
+import { reportPlayed } from '@renderer/store/playlistSync'
 
 
 export default () => {
@@ -92,6 +93,9 @@ export default () => {
       console.log('played stop')
       return
     }
+    // 自然播放完成才上报，手动切歌不上报
+    const playedInfo = playMusicInfo.musicInfo as LX.Music.MusicInfo | null
+    if (playedInfo) reportPlayed(playedInfo)
     // resetPlayerMusicInfo()
     // window.app_event.stop()
     void playNext(true)

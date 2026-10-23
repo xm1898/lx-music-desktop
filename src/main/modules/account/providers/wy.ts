@@ -309,6 +309,12 @@ const getSongDetails = async(ids: string[], cookies: Record<string, string>): Pr
   return list
 }
 
+/** 拉取平台歌单的曲目 id 序列（不取详情，用于同步对比） */
+export const getPlaylistIds = async(sessionValue: LX.Account.LoginSession | null, playlistId: string): Promise<string[]> => {
+  const session = requireSession(sessionValue)
+  return getPlaylistTrackIds(session, playlistId)
+}
+
 export const getPlaylistSongs = async(sessionValue: LX.Account.LoginSession | null, playlistId: string): Promise<LX.Music.MusicInfoOnline[]> => {
   const session = requireSession(sessionValue)
   const ids = await getPlaylistTrackIds(session, playlistId)
@@ -435,6 +441,42 @@ export const addPlaylistTracks = async(sessionValue: LX.Account.LoginSession | n
 
 export const removePlaylistTracks = async(sessionValue: LX.Account.LoginSession | null, playlistId: string, songIds: string[]) => {
   return manipulateTracks(requireSession(sessionValue), playlistId, songIds, 'del')
+}
+
+/** 上报播放记录，写入平台的「最近播放」（weblog 未登录也返回 success，登录后真正生效） */
+export const reportPlayHistory = async(
+  sessionValue: LX.Account.LoginSession | null,
+  songIds: string[],
+  playTime = 30,
+): Promise<LX.Account.WriteResult> => {
+  const session = requireSession(sessionValue)
+  const ids = [...new Set(songIds.map(id => String(id).trim()).filter(id => /^\d+$/.test(id)))]
+  if (!ids.length) return { success: 0, failed: 0 }
+  const logs = ids.map(id => ({
+    action: 'play',
+    json: {
+      id,
+      source: 'p_default',
+      time: String(playTime),
+      type: 'song',
+      wifi: 0,
+      download: 0,
+      end: 'playend',
+    },
+  }))
+  try {
+    const response = await eapiPost<{ code: number, message?: string, data?: string }>(
+      '/api/feedback/weblog',
+      { logs: JSON.stringify(logs) },
+      session.cookies,
+    )
+    if (response.statusCode !== 200 || response.body.code !== 200) {
+      return { success: 0, failed: ids.length, message: getRequestError(response.body.message, '上报播放记录失败', response.statusCode, response.body.code) }
+    }
+    return { success: ids.length, failed: 0 }
+  } catch (err: any) {
+    return { success: 0, failed: ids.length, message: err.message ?? String(err) }
+  }
 }
 
 /** 喜欢 / 取消喜欢（写入「我喜欢的音乐」） */
