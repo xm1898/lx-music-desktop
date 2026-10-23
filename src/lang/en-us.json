@@ -840,5 +840,20 @@
   "platform_music_sync_push_partial": "Created NetEase playlist \"{name}\" with {count} songs, some tracks unmatched",
   "platform_music_sync_state_synced": "Synced",
   "platform_music_sync_state_pending": "Pending changes",
-  "platform_music_sync_state_conflict": "Conflict, needs manual action"
+  "platform_music_sync_state_conflict": "Conflict, needs manual action",
+  "setting__play_source_match_filter": "Only keep matched versions when switching source",
+  "setting__play_source_match_filter_tip": "Filter switch-source results by song name, artist and duration to avoid live covers or same-title songs",
+  "setting__play_source_race": "Race multiple sources concurrently",
+  "setting__play_source_race_tip": "Request URLs from multiple sources at once and use the fastest available one; too many concurrent requests may trigger rate limits",
+  "setting__play_source_race_count": "Concurrent sources",
+  "setting__play_recovery_chain": "Playback failure recovery steps",
+  "setting__play_recovery_chain_tip": "Steps are tried top to bottom; unchecked steps are skipped. Refresh re-requests the current source; switch source looks for the same song on other platforms.",
+  "setting__play_recovery_refresh": "Refresh URL",
+  "setting__play_recovery_source": "Switch source",
+  "setting__play_recovery_quality": "Lower quality",
+  "setting__play_recovery_next": "Play next track",
+  "setting__basic_source_probe": "Probe sources",
+  "setting__basic_source_probing": "Probing…",
+  "setting__basic_source_probe_need_sample": "Play a song first (or add one to the audition list) to use as the probe sample",
+  "setting__basic_source_probe_failed": "Probe failed"
 }

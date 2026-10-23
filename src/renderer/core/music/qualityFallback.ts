@@ -5,6 +5,7 @@
  * 避免因为某一个音质档位不可用（音源没缓存、版权限制、接口限流等）
  * 就直接跳到换源甚至跳到下一曲。
  */
+import { qualityList } from '@renderer/store'
 
 /**
  * 各音质档位不可用时的降级顺序（不含自身）
@@ -42,4 +43,16 @@ export const getQualityWeight = (quality: LX.Quality): number => {
     case '128k': return 10
     default: return 0
   }
+}
+
+/**
+ * 判断某个音质档位在该音源上是否可用
+ * @param musicInfo 歌曲信息
+ * @param quality 音质
+ */
+export const isQualityAvailable = (musicInfo: LX.Music.MusicInfoOnline, quality: LX.Quality): boolean => {
+  const list = qualityList.value[musicInfo.source]
+  // 音源没有声明音质列表时不做过滤，交给音源自身判断
+  if (!list?.length) return true
+  return !!musicInfo.meta._qualitys[quality] && list.includes(quality)
 }

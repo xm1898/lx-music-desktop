@@ -840,5 +840,20 @@
   "platform_music_sync_push_partial": "NetEase 플레이리스트 '{name}'을(를) 만들어 {count}곡을 추가했습니다. 일부 곡은 매칭되지 않았습니다",
   "platform_music_sync_state_synced": "동기화됨",
   "platform_music_sync_state_pending": "변경 사항 대기 중",
-  "platform_music_sync_state_conflict": "충돌 발생, 수동 처리 필요"
+  "platform_music_sync_state_conflict": "충돌 발생, 수동 처리 필요",
+  "setting__play_source_match_filter": "소스 전환 시 일치하는 버전만 유지",
+  "setting__play_source_match_filter_tip": "곡명, 아티스트, 길이 기준으로 필터링하여 라이브/커버/동명곡으로 점프하지 않도록 합니다",
+  "setting__play_source_race": "소스 전환 시 동시 경쟁",
+  "setting__play_source_race_tip": "여러 소스에 동시에 요청해 가장 빠른 주소를 사용합니다. 동시 요청이 과다하면 제한이 걸릴 수 있습니다",
+  "setting__play_source_race_count": "동시 요청 소스 수",
+  "setting__play_recovery_chain": "재생 실패 복구 단계",
+  "setting__play_recovery_chain_tip": "위에서 아래 순서로 시도하며, 선택하지 않은 단계는 건너뜁니다. 새로고침은 현재 소스를 다시 요청하고, 소스 전환은 다른 플랫폼에서 같은 곡을 찾습니다.",
+  "setting__play_recovery_refresh": "링크 새로고침",
+  "setting__play_recovery_source": "소스 전환",
+  "setting__play_recovery_quality": "음질 낮추기",
+  "setting__play_recovery_next": "다음 곡 재생",
+  "setting__basic_source_probe": "소스 검사",
+  "setting__basic_source_probing": "검사 중…",
+  "setting__basic_source_probe_need_sample": "먼저 곡을 재생하거나 청취 목록에 곡을 추가하여 검사 샘플로 사용하세요",
+  "setting__basic_source_probe_failed": "검사 실패"
 }

@@ -295,6 +295,26 @@ declare global {
       'player.sourceCooldown': boolean
 
       /**
+       * 换源时是否并发请求多个音源，取最快返回可用地址的那个
+       */
+      'player.sourceRace': boolean
+
+      /**
+       * 并发竞速的音源数量（2-4）
+       */
+      'player.sourceRaceCount': number
+
+      /**
+       * 换源时是否只保留歌名 + 歌手 + 时长都匹配的候选，避免跳到现场版 / 翻唱
+       */
+      'player.sourceMatchFilter': boolean
+
+      /**
+       * 播放失败时的恢复步骤顺序：refresh 刷新链接 / source 换源 / quality 降音质 / next 下一曲
+       */
+      'player.recoveryChain': Array<'refresh' | 'source' | 'quality' | 'next'>
+
+      /**
        * 点击相同列表内的歌曲切歌时是否清空已播放列表（随机模式下列表内所有歌曲会重新参与随机）
        */
       'player.isAutoCleanPlayedList': boolean

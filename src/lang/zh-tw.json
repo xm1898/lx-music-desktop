@@ -840,5 +840,20 @@
   "platform_music_sync_push_partial": "已在網易雲創建歌單「{name}」，寫入 {count} 首，部分歌曲未匹配",
   "platform_music_sync_state_synced": "已同步",
   "platform_music_sync_state_pending": "有待同步改動",
-  "platform_music_sync_state_conflict": "有衝突，需手動處理"
+  "platform_music_sync_state_conflict": "有衝突，需手動處理",
+  "setting__play_source_match_filter": "換源時只保留匹配的版本",
+  "setting__play_source_match_filter_tip": "按歌名、歌手、時長三維打分過濾換源結果，避免跳到現場版、翻唱或同名歌曲",
+  "setting__play_source_race": "換源時並發競速",
+  "setting__play_source_race_tip": "同時向多個音源請求播放連結，取最快返回可用位址的那個，可明顯縮短首播等待；並發數過高可能觸發平台限流",
+  "setting__play_source_race_count": "併發音源數",
+  "setting__play_recovery_chain": "播放失敗恢復步驟",
+  "setting__play_recovery_chain_tip": "按從上到下的順序嘗試；未勾選的步驟會被跳過。刷新連結會重新請求當前源，換源會尋找其他平台的同名歌曲。",
+  "setting__play_recovery_refresh": "刷新連結",
+  "setting__play_recovery_source": "換源",
+  "setting__play_recovery_quality": "降低音質",
+  "setting__play_recovery_next": "播放下一曲",
+  "setting__basic_source_probe": "檢測音源",
+  "setting__basic_source_probing": "檢測中…",
+  "setting__basic_source_probe_need_sample": "請先播放一首歌，或往試聽列表裡加一首歌，作為檢測樣本",
+  "setting__basic_source_probe_failed": "檢測失敗"
 }

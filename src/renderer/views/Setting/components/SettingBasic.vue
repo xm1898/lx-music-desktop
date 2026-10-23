@@ -48,6 +48,12 @@ dd
           span(v-if="item.statusLabel" :class="$style.status") {{ item.statusLabel }}
     .p.gap-top
       base-btn.btn(min @click="isShowUserApiModal = true") {{ $t('setting__basic_source_user_api_btn') }}
+      base-btn.btn(min :disabled="isProbing" @click="handleProbeSources") {{ isProbing ? $t('setting__basic_source_probing') : $t('setting__basic_source_probe') }}
+    p(v-if="probeResults.length" :class="$style.probeList")
+      span(v-for="item in probeResults" :key="item.source" :class="$style.probeItem" :data-ok="item.ok")
+        | {{ item.source }}
+        b(v-if="item.ok") {{ item.quality }} · {{ item.durationMs }}ms
+        b(v-else) {{ item.message }}
 
 dd
   h3#basic_window_size {{ $t('setting__basic_window_size') }}
@@ -119,6 +125,9 @@ import { getSystemFonts } from '@renderer/utils/ipc'
 import apiSourceInfo from '@renderer/utils/musicSdk/api-source-info'
 import { useTimeout } from '@renderer/core/player/timeoutStop'
 import { dialog } from '@renderer/plugins/Dialog'
+import { probeAllSources } from '@renderer/core/music/sourceProbe'
+import { playMusicInfo } from '@renderer/store/player/state'
+import { defaultList } from '@renderer/store/list/listManage/state'
 
 import ThemeSelectorModal from './ThemeSelectorModal.vue'
 import ThemeEditModal from './ThemeEditModal/index.vue'
@@ -324,6 +333,27 @@ export default {
       ]
     })
 
+    // 音源体检：用当前播放的歌曲（或试听列表第一首）做样本，逐个源试取播放地址
+    const isProbing = ref(false)
+    const probeResults = ref([])
+    const handleProbeSources = async() => {
+      if (isProbing.value) return
+      const sample = playMusicInfo.musicInfo ?? defaultList.list[0] ?? null
+      if (!sample) {
+        void dialog(t('setting__basic_source_probe_need_sample'))
+        return
+      }
+      isProbing.value = true
+      probeResults.value = []
+      try {
+        probeResults.value = await probeAllSources(sample)
+      } catch (err) {
+        void dialog(err?.message ?? t('setting__basic_source_probe_failed'))
+      } finally {
+        isProbing.value = false
+      }
+    }
+
 
     return {
       appSetting,
@@ -344,6 +374,9 @@ export default {
       timeLabel,
       apiSources,
       isShowUserApiModal,
+      isProbing,
+      probeResults,
+      handleProbeSources,
       windowSizeList,
       langList,
       sourceNameTypes,
@@ -549,6 +582,32 @@ export default {
 
   .status {
     margin-left: 5px;
+  }
+}
+
+.probeList {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.probeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+  border-radius: @radius-border;
+  background-color: var(--color-primary-light-300-alpha-700);
+
+  b {
+    font-weight: normal;
+    color: var(--color-font-label);
+  }
+
+  &[data-ok='false'] {
+    color: var(--color-font-label);
+    opacity: 0.75;
   }
 }
 

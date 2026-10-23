@@ -25,6 +25,25 @@ dd
     base-checkbox(id="setting_player_source_cooldown" :model-value="appSetting['player.sourceCooldown']" :label="$t('setting__play_source_cooldown')" @update:model-value="updateSetting({'player.sourceCooldown': $event})")
     svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_source_cooldown_tip')")
   .gap-top
+    base-checkbox(id="setting_player_source_match_filter" :model-value="appSetting['player.sourceMatchFilter']" :label="$t('setting__play_source_match_filter')" @update:model-value="updateSetting({'player.sourceMatchFilter': $event})")
+    svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_source_match_filter_tip')")
+  .gap-top
+    base-checkbox(id="setting_player_source_race" :model-value="appSetting['player.sourceRace']" :label="$t('setting__play_source_race')" @update:model-value="updateSetting({'player.sourceRace': $event})")
+    svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_source_race_tip')")
+  .gap-top(v-if="appSetting['player.sourceRace']")
+    span {{ $t('setting__play_source_race_count') }}
+    .race-count
+      base-btn(v-for="count in [2, 3, 4]" :key="count" min :class="{ 'race-count-active': appSetting['player.sourceRaceCount'] === count }" @click="updateSetting({ 'player.sourceRaceCount': count })") {{ count }}
+  .gap-top
+    div {{ $t('setting__play_recovery_chain') }}
+    p.recovery-tip {{ $t('setting__play_recovery_chain_tip') }}
+    .recovery-chain
+      div(v-for="(step, index) in recoveryChain" :key="step.key" class="recovery-row")
+        base-checkbox(:model-value="step.enabled" :label="$t('setting__play_recovery_' + step.key)" @update:model-value="toggleRecoveryStep(index, $event)")
+        .recovery-order
+          base-btn(min :disabled="index === 0" @click="moveRecoveryStep(index, -1)") ↑
+          base-btn(min :disabled="index === recoveryChain.length - 1" @click="moveRecoveryStep(index, 1)") ↓
+  .gap-top
     base-checkbox(id="setting_player_lyric_s2t" :model-value="appSetting['player.isS2t']" :label="$t('setting__play_lyric_s2t')" @update:model-value="updateSetting({'player.isS2t': $event})")
   .gap-top
     base-checkbox(id="setting_player_lyric_play_lxlrc" :model-value="appSetting['player.isPlayLxlrc']" :label="$t('setting__play_lyric_lxlrc')" @update:model-value="updateSetting({'player.isPlayLxlrc': $event})")
@@ -61,7 +80,7 @@ import { useI18n } from '@renderer/plugins/i18n'
 import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/setting'
 import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import { isPlay } from '@renderer/store/player/state'
-import { TRY_QUALITYS_LIST } from '@renderer/core/music/utils'
+import { TRY_QUALITYS_LIST, DEFAULT_RECOVERY_CHAIN } from '@renderer/core/music/utils'
 import { isMac } from '@common/utils'
 
 
@@ -70,6 +89,41 @@ export default {
   setup() {
     const t = useI18n()
     const playQualityList = [...TRY_QUALITYS_LIST, '128k'].reverse()
+
+    const RECOVERY_KEYS = DEFAULT_RECOVERY_CHAIN
+    const recoveryChain = ref(RECOVERY_KEYS.map(key => ({ key, enabled: true })))
+
+    const syncRecoveryChain = () => {
+      const saved = appSetting['player.recoveryChain']
+      const enabled = Array.isArray(saved) && saved.length ? saved : RECOVERY_KEYS
+      // 以固定 key 顺序展示，勾选状态来自保存值；未保存的 key 追加到末尾
+      const known = RECOVERY_KEYS.map(key => ({ key, enabled: enabled.includes(key) }))
+      const extra = enabled.filter(key => !RECOVERY_KEYS.includes(key)).map(key => ({ key, enabled: true }))
+      recoveryChain.value = [...known, ...extra]
+    }
+    syncRecoveryChain()
+
+    const persistRecoveryChain = (list) => {
+      const enabled = list.filter(item => item.enabled).map(item => item.key)
+      updateSetting({ 'player.recoveryChain': enabled })
+    }
+
+    const toggleRecoveryStep = (index, value) => {
+      const next = [...recoveryChain.value]
+      next[index] = { ...next[index], enabled: !!value }
+      recoveryChain.value = next
+      persistRecoveryChain(next)
+    }
+
+    const moveRecoveryStep = (index, offset) => {
+      const target = index + offset
+      if (target < 0 || target >= recoveryChain.value.length) return
+      const next = [...recoveryChain.value]
+      const [item] = next.splice(index, 1)
+      next.splice(target, 0, item)
+      recoveryChain.value = next
+      persistRecoveryChain(next)
+    }
 
     const mediaDevices = ref([])
     const getMediaDevice = async() => {
@@ -155,6 +209,9 @@ export default {
       handleUpdateMaxOutputChannelCount,
       playQualityList,
       isMac,
+      recoveryChain,
+      toggleRecoveryStep,
+      moveRecoveryStep,
     }
   },
 }

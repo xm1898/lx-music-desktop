@@ -840,5 +840,20 @@
   "platform_music_sync_push_partial": "已在网易云创建歌单「{name}」，写入 {count} 首，部分歌曲未匹配",
   "platform_music_sync_state_synced": "已同步",
   "platform_music_sync_state_pending": "有待同步改动",
-  "platform_music_sync_state_conflict": "有冲突，需手动处理"
+  "platform_music_sync_state_conflict": "有冲突，需手动处理",
+  "setting__play_source_match_filter": "换源时只保留匹配的版本",
+  "setting__play_source_match_filter_tip": "按歌名、歌手、时长三维打分过滤换源结果，避免跳到现场版、翻唱或同名歌曲",
+  "setting__play_source_race": "换源时并发竞速",
+  "setting__play_source_race_tip": "同时向多个音源请求播放链接，取最快返回可用地址的那个，可明显缩短首播等待；并发数过高可能触发平台限流",
+  "setting__play_source_race_count": "并发音源数",
+  "setting__play_recovery_chain": "播放失败恢复步骤",
+  "setting__play_recovery_chain_tip": "按从上到下的顺序尝试；未勾选的步骤会被跳过。刷新链接会重新请求当前源，换源会寻找其他平台的同名歌曲。",
+  "setting__play_recovery_refresh": "刷新链接",
+  "setting__play_recovery_source": "换源",
+  "setting__play_recovery_quality": "降低音质",
+  "setting__play_recovery_next": "播放下一曲",
+  "setting__basic_source_probe": "检测音源",
+  "setting__basic_source_probing": "检测中…",
+  "setting__basic_source_probe_need_sample": "请先播放一首歌，或往试听列表里加一首歌，作为检测样本",
+  "setting__basic_source_probe_failed": "检测失败"
 }

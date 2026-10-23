@@ -11,8 +11,19 @@ import { appSetting } from '@renderer/store/setting'
 import { langS2T, toNewMusicInfo, toOldMusicInfo } from '@renderer/utils'
 import { requestMsg } from '@renderer/utils/message'
 import { apis } from '@renderer/utils/musicSdk/api-source'
-import { getQualityFallbackChain } from './qualityFallback'
+import { getQualityFallbackChain, isQualityAvailable } from './qualityFallback'
 import { isSourceCoolingDown, recordSourceFailure, recordSourceSuccess } from './sourceHealth'
+import { filterMatchedSources } from './sourceMatch'
+
+/** 恢复链默认顺序 */
+export const DEFAULT_RECOVERY_CHAIN: Array<'refresh' | 'source' | 'quality' | 'next'> = ['refresh', 'source', 'quality', 'next']
+
+/** 恢复链某一步是否启用（兼容旧配置缺失时回退默认值） */
+export const isRecoveryEnabled = (step: 'refresh' | 'source' | 'quality' | 'next'): boolean => {
+  const chain = appSetting['player.recoveryChain']
+  if (!Array.isArray(chain) || !chain.length) return DEFAULT_RECOVERY_CHAIN.includes(step)
+  return chain.includes(step)
+}
 
 
 const getOtherSourcePromises = new Map()
@@ -237,18 +248,6 @@ export const getPlayQuality = (highQuality: LX.Quality, musicInfo: LX.Music.Musi
 }
 
 /**
- * 判断某个音质档位在该音源上是否可用
- * @param musicInfo 歌曲信息
- * @param quality 音质
- */
-const isQualityAvailable = (musicInfo: LX.Music.MusicInfoOnline, quality: LX.Quality): boolean => {
-  const list = qualityList.value[musicInfo.source]
-  // 音源没有声明音质列表时不做过滤，交给音源自身判断
-  if (!list?.length) return true
-  return !!musicInfo.meta._qualitys[quality] && list.includes(quality)
-}
-
-/**
  * 按音质链依次尝试获取播放链接
  *
  * 同一音源内先按「高 → 低」降级重试，只有整条链都失败才认为该音源不可用。
@@ -305,19 +304,41 @@ export const getOnlineOtherSourceMusicUrl = async({ musicInfos, quality, onToggl
 }> => {
   if (!await window.lx.apiInitPromise[0]) throw new Error('source init failed')
 
+  // 恢复链里没有换源这一步时，不进入换源流程，把失败交给上层处理
+  if (!isRecoveryEnabled('source')) throw new Error(window.i18n.t('toggle_source_failed'))
+
   const candidates = musicInfos.filter(musicInfo => !retryedSource.includes(musicInfo.source) && assertApiSupport(musicInfo.source))
   if (!candidates.length) throw new Error(window.i18n.t('toggle_source_failed'))
 
+  // 换源匹配过滤：只保留歌名 + 歌手 + 时长都对得上的候选，避免跳到现场版 / 翻唱
+  const matchedCandidates = appSetting['player.sourceMatchFilter']
+    ? filterMatchedSources<LX.Music.MusicInfoOnline>(candidates, candidates[0])
+    : candidates
+
   // 优先跳过处于冷却期的音源，全部冷却时退回完整列表
-  const usableCandidates = appSetting['player.sourceCooldown'] ? candidates.filter(musicInfo => !isSourceCoolingDown(musicInfo.source)) : candidates
-  const tryList = usableCandidates.length ? usableCandidates : candidates
+  const usableCandidates = appSetting['player.sourceCooldown'] ? matchedCandidates.filter(musicInfo => !isSourceCoolingDown(musicInfo.source)) : matchedCandidates
+  const tryList = usableCandidates.length ? usableCandidates : matchedCandidates
+
+  // 并发竞速：同时打 N 个源，取最快返回可用地址的那个
+  if (appSetting['player.sourceRace'] && tryList.length > 1 && !isRefresh) {
+    const raceCount = Math.max(2, Math.min(appSetting['player.sourceRaceCount'] || 2, tryList.length))
+    const pool = tryList.slice(0, raceCount)
+    try {
+      return await raceSourceUrls(pool, { quality, onToggleSource, retryedSource })
+    } catch (err: any) {
+      if (err?.message == requestMsg.tooManyRequests) throw err
+      console.log('[source-race] 竞速全部失败，回退串行：', err?.message)
+    }
+  }
 
   let lastError: any
   for (const musicInfo of tryList) {
     retryedSource.push(musicInfo.source)
 
     const preferredQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
-    let tryQualitys = appSetting['player.qualityFallback'] ? getQualityFallbackChain(preferredQuality) : [preferredQuality]
+    let tryQualitys = isRecoveryEnabled('quality') && appSetting['player.qualityFallback']
+      ? getQualityFallbackChain(preferredQuality)
+      : [preferredQuality]
     tryQualitys = tryQualitys.filter(q => isQualityAvailable(musicInfo, q))
     if (!tryQualitys.length) tryQualitys = [preferredQuality]
 
@@ -342,6 +363,51 @@ export const getOnlineOtherSourceMusicUrl = async({ musicInfos, quality, onToggl
   throw lastError ?? new Error(window.i18n.t('toggle_source_failed'))
 }
 
+/** 并发竞速：多个源同时请求，第一个成功的获胜，其余按实际成败记录熔断 */
+const raceSourceUrls = async(pool: LX.Music.MusicInfoOnline[], { quality, onToggleSource, retryedSource }: {
+  quality?: LX.Quality
+  onToggleSource: (musicInfo?: LX.Music.MusicInfoOnline) => void
+  retryedSource: LX.OnlineSource[]
+}): Promise<{
+  url: string
+  musicInfo: LX.Music.MusicInfoOnline
+  quality: LX.Quality
+  isFromCache: boolean
+}> => {
+  const tasks = pool.map(async musicInfo => {
+    retryedSource.push(musicInfo.source)
+    const preferredQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
+    let tryQualitys = appSetting['player.qualityFallback'] ? getQualityFallbackChain(preferredQuality) : [preferredQuality]
+    tryQualitys = tryQualitys.filter(q => isQualityAvailable(musicInfo, q))
+    if (!tryQualitys.length) tryQualitys = [preferredQuality]
+
+    const cachedUrl = await getStoreMusicUrl(musicInfo, tryQualitys[0])
+    if (cachedUrl) return { url: cachedUrl, musicInfo, quality: tryQualitys[0], isFromCache: true }
+
+    const result = await getMusicUrlWithQualityFallback(musicInfo, tryQualitys)
+    return { musicInfo, url: result.url, quality: result.quality, isFromCache: false }
+  })
+
+  // 等所有任务落定再结算，避免产生未处理的 Promise 拒绝
+  const settled = await Promise.allSettled(tasks)
+  let winner: { url: string, musicInfo: LX.Music.MusicInfoOnline, quality: LX.Quality, isFromCache: boolean } | null = null
+  let lastError: any
+  for (let index = 0; index < settled.length; index++) {
+    const item = settled[index]
+    if (item.status === 'fulfilled') {
+      if (!winner) winner = item.value
+      recordSourceSuccess(pool[index].source)
+    } else {
+      recordSourceFailure(pool[index].source)
+      lastError ??= item.reason
+    }
+  }
+  if (!winner) throw lastError ?? new Error(window.i18n.t('toggle_source_failed'))
+  onToggleSource(winner.musicInfo)
+  console.log('[source-race] 获胜音源：', winner.musicInfo.source)
+  return winner
+}
+
 /**
  * 获取在线音乐URL
  */
@@ -362,7 +428,9 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
   const targetQuality = quality ?? getPlayQuality(appSetting['player.playQuality'], musicInfo)
 
   // 首选音质不可用时按音质链降级，避免直接跳到换源
-  let tryQualitys = appSetting['player.qualityFallback'] ? getQualityFallbackChain(targetQuality) : [targetQuality]
+  let tryQualitys = isRecoveryEnabled('quality') && appSetting['player.qualityFallback']
+    ? getQualityFallbackChain(targetQuality)
+    : [targetQuality]
   tryQualitys = tryQualitys.filter(q => isQualityAvailable(musicInfo, q))
   if (!tryQualitys.length) tryQualitys = [targetQuality]
 
@@ -374,7 +442,8 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
     console.log(err)
     if (err?.message == requestMsg.tooManyRequests) throw err
     recordSourceFailure(musicInfo.source)
-    if (!allowToggleSource) throw err
+    // 恢复链里没有换源这一步时直接抛出，交给上层走「下一曲」等后续步骤
+    if (!allowToggleSource || !isRecoveryEnabled('source')) throw err
     onToggleSource()
 
     const otherSource = await getOtherSource(musicInfo)
