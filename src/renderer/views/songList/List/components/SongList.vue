@@ -4,7 +4,7 @@
       <ul>
         <li v-for="item in props.listInfo.list" :key="item.id" :class="$style.item" @click="toDetail(item)">
           <div :class="$style.image">
-            <img :class="$style.img" loading="lazy" decoding="async" :src="item.img">
+            <img :class="$style.img" loading="lazy" decoding="async" :src="coverOf(item)" @error="handleCardPicError">
           </div>
           <div :class="$style.desc">
             <h4>{{ item.name }}</h4>
@@ -37,6 +37,7 @@
 import { ref } from '@common/utils/vueTools'
 import type { ListInfo, ListInfoItem } from '@renderer/store/songList/state'
 import { useRoute, useRouter } from '@common/utils/vueRouter'
+import { getCardPicUrl, handleCardPicError } from '@renderer/utils/picCache'
 
 
 const props = withDefaults(defineProps<{
@@ -45,6 +46,9 @@ const props = withDefaults(defineProps<{
 }>(), {
   visibleSource: false,
 })
+
+// 歌单封面走磁盘缓存协议，空值 / 加载失败有占位兜底
+const coverOf = (item: ListInfoItem) => getCardPicUrl(item.img)
 
 const router = useRouter()
 const route = useRoute()

@@ -49,7 +49,7 @@ import { useRouter } from '@common/utils/vueRouter'
 import { addSongListDetail, playSongListDetail } from './action'
 import useList from './useList'
 import useKeyBack from './useKeyBack'
-import { toCachedPicUrl } from '@renderer/utils/picCache'
+import { toCachedPicUrl, FALLBACK_PIC_URL } from '@renderer/utils/picCache'
 
 
 const source = ref<LX.OnlineSource>('kw')
@@ -58,8 +58,8 @@ const page = ref<number>(1)
 const picUrl = ref<string>('')
 const refresh = ref<boolean>(false)
 
-// 歌单封面走磁盘缓存协议，避免每次进页面都重新拉图
-const cachedPicUrl = computed(() => toCachedPicUrl(picUrl.value || listDetailInfo.info.img))
+// 歌单封面走磁盘缓存协议，避免每次进页面都重新拉图；接口未返回封面时用占位图兜底
+const cachedPicUrl = computed(() => toCachedPicUrl(picUrl.value || listDetailInfo.info.img) || FALLBACK_PIC_URL)
 
 
 interface Query {

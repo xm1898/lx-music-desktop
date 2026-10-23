@@ -58,7 +58,7 @@ div(:class="$style.container")
           ) {{ $t('platform_music_remove') }}
   template(v-else)
     div(:class="$style.accountBar")
-      img(v-if="wyAccount.avatar" :src="wyAccount.avatar" :class="$style.avatar" alt="")
+      img(:src="toCachedPicUrl(wyAccount.avatar)" :class="$style.avatar" alt="" @error="handleCardPicError")
       span(:class="$style.nickname") {{ wyAccount.nickname }}
       span(:class="$style.badge") {{ $t('platform_music_logged_in') }}
       base-btn(min :class="$style.refreshBtn" :disabled="isLoading" @click="openCreate") {{ $t('platform_music_playlist_create') }}
@@ -82,7 +82,7 @@ div(:class="$style.container")
           tabindex="0"
           @click="openPlaylist(item)"
         )
-          img(v-if="item.img" :src="item.img" :class="$style.cover" alt="" loading="lazy")
+          img(:src="coverOf(item)" :class="$style.cover" alt="" loading="lazy" @error="handleCardPicError")
           div(:class="$style.cardBody")
             p(:class="$style.cardName" :title="item.name") {{ item.name }}
             p(:class="$style.cardSub") {{ $t('platform_music_total', { count: item.total }) }}
@@ -161,6 +161,7 @@ import {
 } from '@renderer/store/playlistSync'
 import { playList } from '@renderer/core/player/action'
 import { loadAccounts, wyAccount } from '@renderer/store/account'
+import { getCardPicUrl, handleCardPicError, toCachedPicUrl } from '@renderer/utils/picCache'
 import SongPickerModal from './components/SongPickerModal.vue'
 import PlaylistEditModal from './components/PlaylistEditModal.vue'
 
@@ -197,6 +198,9 @@ const syncStates = ref<Record<string, SyncResult['outcome']>>({})
 
 const PLATFORM_LIST_ID = 'platform_music'
 let noticeTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 歌单卡片封面：走磁盘缓存协议，空值 / 加载失败有占位兜底 */
+const coverOf = (item: LX.Account.PlaylistInfo) => getCardPicUrl(item.img)
 
 const showNotice = (message: string) => {
   notice.value = message
