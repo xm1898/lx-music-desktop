@@ -259,8 +259,10 @@ export const request = async <T = unknown>(url: string, options: Options = {}): 
       } satisfies Omit<Response<T>, 'body'> as Response<T>
     }
     // console.log(response)
+    // 按响应头判断是否解析 JSON；undici 的响应头键为小写，同时兼容大写写法
+    const contentType = response.headers['content-type'] ?? response.headers['Content-Type']
     let body = (await response.body.text()) as T
-    if (!headers['Content-Type'] || headers['Content-Type'].includes(CONTENT_TYPE.json)) {
+    if (!contentType || contentType.includes(CONTENT_TYPE.json)) {
       try {
         body = JSON.parse(body as string) as T
       } catch {}
