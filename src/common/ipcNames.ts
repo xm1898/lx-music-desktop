@@ -173,6 +173,10 @@ const modules = {
     account_play_history: 'account_play_history',
     image_cache_info: 'image_cache_info',
     image_cache_clear: 'image_cache_clear',
+    mini_player_control: 'mini_player_control',
+    mini_player_state: 'mini_player_state',
+    mini_player_toggle: 'mini_player_toggle',
+    mini_player_status: 'mini_player_status',
   },
   winLyric: {
     close: 'close',
@@ -191,6 +195,18 @@ const modules = {
     enable: 'enable',
     status: 'status',
     set_config: 'set_config',
+  },
+  miniPlayer: {
+    /** 迷你播放器 → 主进程：播放控制 */
+    control: 'control',
+    /** 迷你播放器 → 主进程：就绪，请求当前状态 */
+    ready: 'ready',
+    /** 主进程 → 迷你播放器：推送播放状态 */
+    set_state: 'set_state',
+    /** 迷你播放器 → 主进程：关闭迷你播放器 */
+    close: 'close',
+    /** 迷你播放器 → 主进程：切换置顶 */
+    toggle_always_on_top: 'toggle_always_on_top',
   },
 }
 
@@ -216,3 +232,4 @@ export const DISLIKE_EVENT_NAME = modules.dislike
 export const WIN_MAIN_RENDERER_EVENT_NAME = modules.winMain
 export const WIN_LYRIC_RENDERER_EVENT_NAME = modules.winLyric
 export const HOTKEY_RENDERER_EVENT_NAME = modules.hotKey
+export const MINI_PLAYER_RENDERER_EVENT_NAME = modules.miniPlayer

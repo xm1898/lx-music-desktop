@@ -13,6 +13,7 @@ const webpackHotMiddleware = require('webpack-hot-middleware')
 const mainConfig = require('./main/webpack.config.dev')
 const rendererConfig = require('./renderer/webpack.config.dev')
 const rendererLyricConfig = require('./renderer-lyric/webpack.config.dev')
+const rendererMiniConfig = require('./renderer-mini/webpack.config.dev')
 const rendererScriptConfig = require('./renderer-scripts/webpack.config.dev')
 const { Arch } = require('electron-builder')
 const replaceLib = require('./build-before-pack')
@@ -22,6 +23,7 @@ const { debounce } = require('./utils')
 let electronProcess = null
 let hotMiddlewareRenderer
 let hotMiddlewareRendererLyric
+let hotMiddlewareRendererMini
 
 
 function startRenderer() {
@@ -109,6 +111,42 @@ function startRendererLyric() {
       },
       setupMiddlewares(middlewares, devServer) {
         devServer.app.use(hotMiddlewareRenderer)
+        setImmediate(() => {
+          devServer.middleware.waitUntilValid(resolve)
+        })
+        return middlewares
+      },
+    }, compiler)
+
+    server.start()
+  })
+}
+
+function startRendererMini() {
+  return new Promise((resolve, reject) => {
+    const compiler = webpack(rendererMiniConfig)
+    hotMiddlewareRendererMini = webpackHotMiddleware(compiler, {
+      log: false,
+      heartbeat: 2500,
+    })
+
+    compiler.hooks.compilation.tap('compilation', compilation => {
+      HtmlWebpackPlugin.getHooks(compilation).beforeEmit.tapAsync('html-webpack-plugin-after-emit', (data, cb) => {
+        hotMiddlewareRendererMini.publish({ action: 'reload' })
+        cb()
+      })
+    })
+
+    const server = new WebpackDevServer({
+      port: 9082,
+      hot: true,
+      historyApiFallback: true,
+      client: {
+        logging: 'warn',
+        overlay: true,
+      },
+      setupMiddlewares(middlewares, devServer) {
+        devServer.app.use(hotMiddlewareRendererMini)
         setImmediate(() => {
           devServer.middleware.waitUntilValid(resolve)
         })
@@ -222,6 +260,7 @@ function init() {
   spinners.add('main', { text: 'main compiling' })
   spinners.add('renderer', { text: 'renderer compiling' })
   spinners.add('renderer-lyric', { text: 'renderer-lyric compiling' })
+  spinners.add('renderer-mini', { text: 'renderer-mini compiling' })
   spinners.add('renderer-scripts', { text: 'renderer-scripts compiling' })
   function handleSuccess(name) {
     spinners.succeed(name, { text: name + ' compile success!' })
@@ -239,6 +278,10 @@ function init() {
     startRendererLyric().then(() => handleSuccess('renderer-lyric')).catch((err) => {
       console.error(err.message)
       return handleFail('renderer-lyric')
+    }),
+    startRendererMini().then(() => handleSuccess('renderer-mini')).catch((err) => {
+      console.error(err.message)
+      return handleFail('renderer-mini')
     }),
     startRendererScripts().then(() => handleSuccess('renderer-scripts')).catch((err) => {
       console.error(err.message)

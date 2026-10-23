@@ -864,5 +864,14 @@
   "setting__basic_image_cache_desc": "곡 목록 및 플레이어 커버가 로컬 디스크에 캐시되어 다시 열어도 다시 다운로드하지 않습니다. 제한: 256MB / 10000장, 초과 시 가장 오래 사용하지 않은 이미지가 제거됩니다.",
   "setting__basic_image_cache_usage": "현재 사용량: {count}장, {size}",
   "setting__basic_image_cache_refresh": "통계 새로고침",
-  "setting__basic_image_cache_clear": "커버 캐시 지우기"
+  "setting__basic_image_cache_clear": "커버 캐시 지우기",
+  "mini__no_song": "재생 중 아님",
+  "mini__play": "재생",
+  "mini__pause": "일시중지",
+  "mini__prev": "이전 곡",
+  "mini__next": "다음 곡",
+  "mini__pin": "항상 위에 고정/해제",
+  "mini__close": "미니 플레이어 닫기",
+  "setting__play_mini_player": "미니 플레이어",
+  "setting__play_mini_player_tip": "현재 재생 중인 곡과 기본 컨트롤을 표시하는 작은 항상 위에 창을 엽니다. 위치와 크기는 기억됩니다."
 }

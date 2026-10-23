@@ -864,5 +864,14 @@
   "setting__basic_image_cache_desc": "Song list and player covers are cached on disk so repeated opens skip re-downloading. Limit: 256 MB / 10000 images; least recently used images are evicted when exceeded.",
   "setting__basic_image_cache_usage": "Currently used: {count} images, {size}",
   "setting__basic_image_cache_refresh": "Refresh stats",
-  "setting__basic_image_cache_clear": "Clear cover cache"
+  "setting__basic_image_cache_clear": "Clear cover cache",
+  "mini__no_song": "Not playing",
+  "mini__play": "Play",
+  "mini__pause": "Pause",
+  "mini__prev": "Previous",
+  "mini__next": "Next",
+  "mini__pin": "Toggle always on top",
+  "mini__close": "Close mini player",
+  "setting__play_mini_player": "Mini player",
+  "setting__play_mini_player_tip": "Opens a small always-on-top window with the current song and basic controls. Position and size are remembered."
 }

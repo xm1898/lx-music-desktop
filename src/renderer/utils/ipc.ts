@@ -918,3 +918,9 @@ export const getImageCacheInfo = async() => {
 export const clearImageCache = async() => {
   return rendererInvoke<{ count: number, size: number }>(WIN_MAIN_RENDERER_EVENT_NAME.image_cache_clear)
 }
+export const toggleMiniPlayer = async(show: boolean) => {
+  return rendererInvoke<boolean, boolean>(WIN_MAIN_RENDERER_EVENT_NAME.mini_player_toggle, show)
+}
+export const getMiniPlayerStatus = async() => {
+  return rendererInvoke<{ isOpen: boolean }>(WIN_MAIN_RENDERER_EVENT_NAME.mini_player_status)
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "isolatedModules": true,
+    "paths": {
+      "@common/*": ["../common/*"],
+      "@mini/*": ["../renderer-mini/*"],
+      "@static/*": ["../static/*"],
+      "@root/*": ["../*"]
+    },
+    "typeRoots": [
+      "./types"
+    ]
+  }
+}

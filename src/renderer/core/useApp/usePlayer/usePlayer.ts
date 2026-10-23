@@ -39,6 +39,7 @@ import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import usePreloadNextMusic from './usePreloadNextMusic'
 import { reportPlayed } from '@renderer/store/playlistSync'
 import { useGaplessFade } from '@renderer/core/player/gapless'
+import useMiniPlayerSync from './useMiniPlayerSync'
 
 
 export default () => {
@@ -55,6 +56,7 @@ export default () => {
   useWatchList()
   usePreloadNextMusic()
   useGaplessFade()
+  useMiniPlayerSync()
 
   const handlePlayNext = () => {
     void playNext()

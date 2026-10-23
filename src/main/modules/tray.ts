@@ -10,6 +10,11 @@ import {
 } from './winMain'
 import { quitApp } from '@main/app'
 import { TRAY_AUTO_ID } from '@common/constants'
+import {
+  createWindow as createMiniPlayerWindow,
+  isExistWindow as isExistMiniPlayerWindow,
+  closeWindow as closeMiniPlayerWindow,
+} from './miniPlayer/main'
 
 let tray: Electron.Tray | null
 let isEnableTray: boolean = false
@@ -63,6 +68,8 @@ const messages = {
     hide_win_main: 'Hide Main Window',
     show_win_main: 'Show Main Window',
     hide_win_lyric: 'Hide Lyric Window',
+    show_win_mini: 'Show Mini Player',
+    hide_win_mini: 'Hide Mini Player',
     show_win_lyric: 'Show Lyric Window',
     lock_win_lyric: 'Lock Lyric Window',
     unlock_win_lyric: 'Unlock Lyric Window',
@@ -85,6 +92,8 @@ const messages = {
     show_win_main: '显示主界面',
     hide_win_lyric: '关闭桌面歌词',
     show_win_lyric: '开启桌面歌词',
+    show_win_mini: '打开迷你播放器',
+    hide_win_mini: '关闭迷你播放器',
     lock_win_lyric: '锁定桌面歌词',
     unlock_win_lyric: '解锁桌面歌词',
     top_win_lyric: '置顶歌词',
@@ -106,6 +115,8 @@ const messages = {
     show_win_main: '顯示軟體視窗',
     hide_win_lyric: '關閉歌詞視窗',
     show_win_lyric: '開啟歌詞視窗',
+    show_win_mini: '打開迷你播放器',
+    hide_win_mini: '關閉迷你播放器',
     lock_win_lyric: '鎖定歌詞視窗',
     unlock_win_lyric: '解鎖歌詞視窗',
     top_win_lyric: '置頂歌詞視窗',
@@ -127,6 +138,8 @@ const messages = {
     show_win_main: '메인 창 표시',
     hide_win_lyric: '가사 창 닫기',
     show_win_lyric: '가사 창 열기',
+    show_win_mini: '미니 플레이어 열기',
+    hide_win_mini: '미니 플레이어 닫기',
     lock_win_lyric: '가사 창 잠금',
     unlock_win_lyric: '가사 창 잠금 해제',
     top_win_lyric: '가사 항상 위에 표시',
@@ -271,6 +284,19 @@ export const createMenu = () => {
         label: i18n.getMessage('top_win_lyric'),
         click() {
           handleUpdateConfig({ 'desktopLyric.isAlwaysOnTop': true })
+        },
+      })
+  menu.push(isExistMiniPlayerWindow()
+    ? {
+        label: i18n.getMessage('hide_win_mini'),
+        click() {
+          closeMiniPlayerWindow()
+        },
+      }
+    : {
+        label: i18n.getMessage('show_win_mini'),
+        click() {
+          createMiniPlayerWindow()
         },
       })
   if (isMac) {

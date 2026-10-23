@@ -320,6 +320,27 @@ declare global {
       'player.gaplessFade': number
 
       /**
+       * 迷你播放器窗口位置，null 表示尚未定位过
+       */
+      'miniPlayer.x': number | null
+      /**
+       * 迷你播放器窗口位置，null 表示尚未定位过
+       */
+      'miniPlayer.y': number | null
+      /**
+       * 迷你播放器窗口宽度
+       */
+      'miniPlayer.width': number
+      /**
+       * 迷你播放器窗口高度
+       */
+      'miniPlayer.height': number
+      /**
+       * 迷你播放器是否置顶
+       */
+      'miniPlayer.isAlwaysOnTop': boolean
+
+      /**
        * 点击相同列表内的歌曲切歌时是否清空已播放列表（随机模式下列表内所有歌曲会重新参与随机）
        */
       'player.isAutoCleanPlayedList': boolean

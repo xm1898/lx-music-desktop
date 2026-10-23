@@ -864,5 +864,14 @@
   "setting__basic_image_cache_desc": "歌单封面、播放页封面会缓存到本地磁盘，重复打开不再重新下载；上限 256 MB / 10000 张，超限后自动淘汰最久未使用的图片。",
   "setting__basic_image_cache_usage": "当前占用：{count} 张，共 {size}",
   "setting__basic_image_cache_refresh": "刷新统计",
-  "setting__basic_image_cache_clear": "清空封面缓存"
+  "setting__basic_image_cache_clear": "清空封面缓存",
+  "mini__no_song": "未播放",
+  "mini__play": "播放",
+  "mini__pause": "暂停",
+  "mini__prev": "上一曲",
+  "mini__next": "下一曲",
+  "mini__pin": "置顶 / 取消置顶",
+  "mini__close": "关闭迷你播放器",
+  "setting__play_mini_player": "迷你播放器",
+  "setting__play_mini_player_tip": "打开一个置顶小窗，显示当前播放的歌曲与常用控制；窗口位置和大小会记住"
 }

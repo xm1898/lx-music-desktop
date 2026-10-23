@@ -40,6 +40,9 @@ dd
     .race-count
       base-btn(v-for="ms in [0, 200, 500, 1000, 2000, 3000]" :key="ms" min :class="{ 'race-count-active': appSetting['player.gaplessFade'] === ms }" @click="updateSetting({ 'player.gaplessFade': ms })") {{ ms === 0 ? $t('setting__play_gapless_off') : ms + 'ms' }}
   .gap-top
+    base-checkbox(id="setting_player_mini_player" :model-value="isMiniPlayerOpen" :label="$t('setting__play_mini_player')" @update:model-value="handleToggleMiniPlayer")
+    svg-icon(class="help-icon" name="help-circle-outline" :aria-label="$t('setting__play_mini_player_tip')")
+  .gap-top
     div {{ $t('setting__play_recovery_chain') }}
     p.recovery-tip {{ $t('setting__play_recovery_chain_tip') }}
     .recovery-chain
@@ -86,6 +89,7 @@ import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/se
 import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import { isPlay } from '@renderer/store/player/state'
 import { TRY_QUALITYS_LIST, DEFAULT_RECOVERY_CHAIN } from '@renderer/core/music/utils'
+import { getMiniPlayerStatus, toggleMiniPlayer } from '@renderer/utils/ipc'
 import { isMac } from '@common/utils'
 
 
@@ -97,6 +101,25 @@ export default {
 
     const RECOVERY_KEYS = DEFAULT_RECOVERY_CHAIN
     const recoveryChain = ref(RECOVERY_KEYS.map(key => ({ key, enabled: true })))
+
+    // 迷你播放器开关：状态由主进程窗口持有
+    const isMiniPlayerOpen = ref(false)
+    const refreshMiniPlayerStatus = async() => {
+      try {
+        const status = await getMiniPlayerStatus()
+        isMiniPlayerOpen.value = status.isOpen
+      } catch {}
+    }
+    void refreshMiniPlayerStatus()
+
+    const handleToggleMiniPlayer = async(show) => {
+      isMiniPlayerOpen.value = !!show
+      try {
+        isMiniPlayerOpen.value = await toggleMiniPlayer(!!show)
+      } catch {
+        void refreshMiniPlayerStatus()
+      }
+    }
 
     const syncRecoveryChain = () => {
       const saved = appSetting['player.recoveryChain']
@@ -217,6 +240,8 @@ export default {
       recoveryChain,
       toggleRecoveryStep,
       moveRecoveryStep,
+      isMiniPlayerOpen,
+      handleToggleMiniPlayer,
     }
   },
 }
