@@ -82,7 +82,11 @@ const evict = async() => {
   scheduleIndexSave()
 }
 
-/** 清理索引里已丢失的文件，避免僵尸条目占额度 */
+/**
+ * 索引与磁盘对账：
+ * 1. 删掉索引里文件已丢失的条目（避免僵尸条目占额度）
+ * 2. 删掉磁盘上索引没有的孤儿文件（索引未持久化就被杀掉时会漏下来）
+ */
 const reconcile = async() => {
   let files: string[]
   try {
@@ -94,7 +98,9 @@ const reconcile = async() => {
   for (const [key, item] of index) {
     if (!exists.has(item.file)) index.delete(key)
   }
-  if (index.size) scheduleIndexSave()
+  const orphans = files.filter(name => name !== 'index.json' && !index.has(name))
+  for (const name of orphans) await unlink(join(cacheDir, name)).catch(() => {})
+  if (index.size || orphans.length) scheduleIndexSave()
 }
 
 /** 命中缓存：更新访问时间并刷新文件 mtime，供外部工具核对 */
