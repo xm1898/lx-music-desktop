@@ -282,6 +282,8 @@ export default {
 
     const result = body.req_1.data
     const dirinfo = result.dirinfo
+    // fallback 链路：title 与歌曲数均为空说明歌单已被删除，避免返回空数据导致页面静默无封面
+    if (!dirinfo?.title && !result.total_song_num) throw new Error('歌单不存在或已被删除')
     return {
       list: this.filterListDetail(result.songlist),
       page: 1,
@@ -312,8 +314,12 @@ export default {
     const { body } = await requestObj_listDetail.promise
 
     // console.log(body)
-    if (body.code !== this.successCode) return this.getListDetail(id, ++tryNum)
-    if (body.subcode !== this.successCode || !body.cdlist) return this.getListDetail2(id)
+    if (body.code !== this.successCode) {
+      // code 非 0 且 cdlist 为空数组时，说明歌单已被删除或链接已失效，重试无意义，直接明确报错
+      if (!body.cdlist?.length) throw new Error('歌单不存在或已被删除')
+      return this.getListDetail(id, ++tryNum)
+    }
+    if (body.subcode !== this.successCode || !body.cdlist?.length) return this.getListDetail2(id)
     const cdlist = body.cdlist[0]
     return {
       list: this.filterListDetail(cdlist.songlist),
