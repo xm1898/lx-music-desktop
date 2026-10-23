@@ -5,6 +5,7 @@ import { debounce } from '@common/utils'
 import { HOTKEY_PLAYER } from '@common/hotKey'
 // import { player as eventPlayerNames } from '@renderer/event/names'
 import { volume, isMute, setMute, setVolume } from '@renderer/store/player/volume'
+import { cancelFade } from '@renderer/core/player/gapless'
 import { appSetting, saveVolume, saveVolumeIsMute } from '@renderer/store/setting'
 
 export default () => {
@@ -44,6 +45,8 @@ export default () => {
   }
 
   watch(volume, _volume => {
+    // 用户手动改音量时取消正在进行的渐入渐出，避免互相覆盖
+    cancelFade()
     handleSaveVolume(_volume)
     setPlayerVolume(_volume)
   })

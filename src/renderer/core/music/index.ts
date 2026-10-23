@@ -17,6 +17,7 @@ import {
   getPicUrl as getLocalPicUrl,
   getLyricInfo as getLocalLyricInfo,
 } from './local'
+import { toCachedPicUrl } from '@renderer/utils/picCache'
 
 
 export const getMusicUrl = async({
@@ -52,13 +53,13 @@ export const getPicPath = async({
   isRefresh?: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<string> => {
-  if ('progress' in musicInfo) {
-    return getDownloadPicUrl({ musicInfo, isRefresh, listId, onToggleSource })
-  } else if (musicInfo.source == 'local') {
-    return getLocalPicUrl({ musicInfo, isRefresh, listId, onToggleSource })
-  } else {
-    return getOnlinePicUrl({ musicInfo, isRefresh, listId, onToggleSource })
-  }
+  // 远端封面统一走磁盘缓存协议；本地文件 / data: 等地址原样返回
+  const url = await (('progress' in musicInfo)
+    ? getDownloadPicUrl({ musicInfo, isRefresh, listId, onToggleSource })
+    : musicInfo.source == 'local'
+      ? getLocalPicUrl({ musicInfo, isRefresh, listId, onToggleSource })
+      : getOnlinePicUrl({ musicInfo, isRefresh, listId, onToggleSource }))
+  return toCachedPicUrl(url)
 }
 
 export const getLyricInfo = async({

@@ -38,6 +38,7 @@ import useMaxOutputChannelCount from './useMaxOutputChannelCount'
 import { setPowerSaveBlocker } from '@renderer/core/player/utils'
 import usePreloadNextMusic from './usePreloadNextMusic'
 import { reportPlayed } from '@renderer/store/playlistSync'
+import { useGaplessFade } from '@renderer/core/player/gapless'
 
 
 export default () => {
@@ -53,6 +54,7 @@ export default () => {
   usePlaybackRate()
   useWatchList()
   usePreloadNextMusic()
+  useGaplessFade()
 
   const handlePlayNext = () => {
     void playNext()

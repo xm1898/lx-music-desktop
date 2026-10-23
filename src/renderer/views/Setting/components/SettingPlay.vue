@@ -35,6 +35,11 @@ dd
     .race-count
       base-btn(v-for="count in [2, 3, 4]" :key="count" min :class="{ 'race-count-active': appSetting['player.sourceRaceCount'] === count }" @click="updateSetting({ 'player.sourceRaceCount': count })") {{ count }}
   .gap-top
+    div {{ $t('setting__play_gapless_fade') }}
+    p.recovery-tip {{ $t('setting__play_gapless_fade_tip') }}
+    .race-count
+      base-btn(v-for="ms in [0, 200, 500, 1000, 2000, 3000]" :key="ms" min :class="{ 'race-count-active': appSetting['player.gaplessFade'] === ms }" @click="updateSetting({ 'player.gaplessFade': ms })") {{ ms === 0 ? $t('setting__play_gapless_off') : ms + 'ms' }}
+  .gap-top
     div {{ $t('setting__play_recovery_chain') }}
     p.recovery-tip {{ $t('setting__play_recovery_chain_tip') }}
     .recovery-chain

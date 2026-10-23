@@ -855,5 +855,14 @@
   "setting__basic_source_probe": "Probe sources",
   "setting__basic_source_probing": "Probing…",
   "setting__basic_source_probe_need_sample": "Play a song first (or add one to the audition list) to use as the probe sample",
-  "setting__basic_source_probe_failed": "Probe failed"
+  "setting__basic_source_probe_failed": "Probe failed",
+  "setting__search_placeholder": "Search settings",
+  "setting__play_gapless_fade": "Crossfade on track change",
+  "setting__play_gapless_fade_tip": "Fade out the old track and fade in the new one to avoid transition pops; works best with next-track preloading",
+  "setting__play_gapless_off": "Off",
+  "setting__basic_image_cache": "Cover cache",
+  "setting__basic_image_cache_desc": "Song list and player covers are cached on disk so repeated opens skip re-downloading. Limit: 256 MB / 10000 images; least recently used images are evicted when exceeded.",
+  "setting__basic_image_cache_usage": "Currently used: {count} images, {size}",
+  "setting__basic_image_cache_refresh": "Refresh stats",
+  "setting__basic_image_cache_clear": "Clear cover cache"
 }

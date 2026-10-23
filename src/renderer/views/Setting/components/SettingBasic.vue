@@ -56,6 +56,16 @@ dd
         b(v-else) {{ item.message }}
 
 dd
+  h3#basic_image_cache {{ $t('setting__basic_image_cache') }}
+  div
+    p {{ $t('setting__basic_image_cache_desc') }}
+    p.gap-top
+      | {{ $t('setting__basic_image_cache_usage', { count: imageCacheInfo.count, size: formatCacheSize(imageCacheInfo.size) }) }}
+    .p.gap-top
+      base-btn.btn(min @click="handleRefreshImageCache") {{ $t('setting__basic_image_cache_refresh') }}
+      base-btn.btn(min :disabled="!imageCacheInfo.count" @click="handleClearImageCache") {{ $t('setting__basic_image_cache_clear') }}
+
+dd
   h3#basic_window_size {{ $t('setting__basic_window_size') }}
   div
     base-checkbox.gap-left(
@@ -121,7 +131,7 @@ user-api-modal(v-model="isShowUserApiModal")
 import { computed, ref, watch, reactive, shallowReactive } from '@common/utils/vueTools'
 import { windowSizeList, userApi, isFullscreen, themeId } from '@renderer/store'
 import { langList, useI18n } from '@root/lang'
-import { getSystemFonts } from '@renderer/utils/ipc'
+import { getSystemFonts, getImageCacheInfo, clearImageCache } from '@renderer/utils/ipc'
 import apiSourceInfo from '@renderer/utils/musicSdk/api-source-info'
 import { useTimeout } from '@renderer/core/player/timeoutStop'
 import { dialog } from '@renderer/plugins/Dialog'
@@ -354,6 +364,29 @@ export default {
       }
     }
 
+    // 封面磁盘缓存：展示占用、支持刷新统计与清空
+    const imageCacheInfo = ref({ count: 0, size: 0 })
+    const formatCacheSize = (bytes) => {
+      if (!bytes) return '0 B'
+      const units = ['B', 'KB', 'MB', 'GB']
+      const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
+      const value = bytes / Math.pow(1024, i)
+      return `${i === 0 ? value : value.toFixed(1)} ${units[i]}`
+    }
+    const refreshImageCacheInfo = async() => {
+      try {
+        imageCacheInfo.value = await getImageCacheInfo()
+      } catch {}
+    }
+    const handleRefreshImageCache = () => {
+      void refreshImageCacheInfo()
+    }
+    const handleClearImageCache = async() => {
+      try {
+        imageCacheInfo.value = await clearImageCache()
+      } catch {}
+    }
+    void refreshImageCacheInfo()
 
     return {
       appSetting,
@@ -376,6 +409,10 @@ export default {
       isShowUserApiModal,
       isProbing,
       probeResults,
+      imageCacheInfo,
+      formatCacheSize,
+      handleRefreshImageCache,
+      handleClearImageCache,
       handleProbeSources,
       windowSizeList,
       langList,

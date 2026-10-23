@@ -6,6 +6,7 @@ import registerAppMenu from './appMenu'
 import registerWinLyric from './winLyric'
 import registerCommonRenderers from './commonRenderers'
 import registerAccount from './account'
+import registerImageCache from './imageCache'
 
 let isRegistered = false
 export default () => {
@@ -13,6 +14,7 @@ export default () => {
   registerUserApi()
   registerCommonRenderers()
   registerAccount()
+  registerImageCache()
   registerWinMain()
   registerHotKey()
   registerTray()

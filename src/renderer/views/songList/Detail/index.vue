@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.container">
     <div :class="$style.songListHeader">
-      <div :class="$style.songListHeaderLeft" :style="{ backgroundImage: 'url('+(picUrl || listDetailInfo.info.img)+')' }">
+      <div :class="$style.songListHeaderLeft" :style="{ backgroundImage: 'url('+(cachedPicUrl)+')' }">
         <!-- <span v-if="listDetailInfo.info.play_count" :class="$style.playNum">{{ listDetailInfo.info.play_count }}</span> -->
       </div>
       <div :class="$style.songListHeaderMiddle">
@@ -42,13 +42,14 @@
 </template>
 
 <script lang="ts">
-import { ref, watch } from '@common/utils/vueTools'
+import { ref, watch, computed } from '@common/utils/vueTools'
 import { listDetailInfo } from '@renderer/store/songList/state'
 import { setVisibleListDetail } from '@renderer/store/songList/action'
 import { useRouter } from '@common/utils/vueRouter'
 import { addSongListDetail, playSongListDetail } from './action'
 import useList from './useList'
 import useKeyBack from './useKeyBack'
+import { toCachedPicUrl } from '@renderer/utils/picCache'
 
 
 const source = ref<LX.OnlineSource>('kw')
@@ -56,6 +57,9 @@ const id = ref<string>('')
 const page = ref<number>(1)
 const picUrl = ref<string>('')
 const refresh = ref<boolean>(false)
+
+// 歌单封面走磁盘缓存协议，避免每次进页面都重新拉图
+const cachedPicUrl = computed(() => toCachedPicUrl(picUrl.value || listDetailInfo.info.img))
 
 
 interface Query {
@@ -146,6 +150,7 @@ export default {
       id,
       page,
       picUrl,
+      cachedPicUrl,
       listDetailInfo,
       listRef,
       togglePage,

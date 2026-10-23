@@ -912,3 +912,9 @@ export const likeAccountSongs = async(request: LX.Account.SongLikeRequest) => {
 export const searchAccountSongs = async(request: LX.Account.SongSearchRequest) => {
   return rendererInvoke<LX.Account.SongSearchRequest, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_search, request)
 }
+export const getImageCacheInfo = async() => {
+  return rendererInvoke<{ count: number, size: number }>(WIN_MAIN_RENDERER_EVENT_NAME.image_cache_info)
+}
+export const clearImageCache = async() => {
+  return rendererInvoke<{ count: number, size: number }>(WIN_MAIN_RENDERER_EVENT_NAME.image_cache_clear)
+}

@@ -52,6 +52,7 @@ const defaultSetting: LX.AppSetting = {
   'player.sourceRaceCount': 2,
   'player.sourceMatchFilter': true,
   'player.recoveryChain': ['refresh', 'source', 'quality', 'next'],
+  'player.gaplessFade': 300,
   'player.isAutoCleanPlayedList': false,
   'player.soundEffect.convolution.fileName': '',
   'player.soundEffect.convolution.mainGain': 10,

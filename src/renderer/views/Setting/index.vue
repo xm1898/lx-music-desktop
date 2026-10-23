@@ -24,6 +24,15 @@
       </ul>
     </div>
     <div ref="dom_content_ref" class="scroll" :class="$style.setting">
+      <div :class="$style.searchBar">
+        <input
+          v-model="keyword"
+          type="text"
+          :class="$style.searchInput"
+          :placeholder="$t('setting__search_placeholder')"
+          :aria-label="$t('setting__search_placeholder')"
+        >
+      </div>
       <dl>
         <component :is="avtiveComponentName" />
         <!-- <SettingBasic />
@@ -47,7 +56,7 @@
 </template>
 
 <script>
-import { ref, computed, nextTick } from '@common/utils/vueTools'
+import { ref, computed, nextTick, watch } from '@common/utils/vueTools'
 // import { currentStting } from './setting'
 import { useI18n } from '@renderer/plugins/i18n'
 import { useRoute } from '@common/utils/vueRouter'
@@ -133,11 +142,48 @@ export default {
       })
     }
 
+    // 设置页搜索：按「分类标题 + 该分类下所有条目」整组过滤，匹配不到就整组隐藏
+    const keyword = ref('')
+    const applySearch = () => {
+      const dom = dom_content_ref.value
+      if (!dom) return
+      const dl = dom.querySelector('dl')
+      if (!dl) return
+      const text = keyword.value.trim().toLowerCase()
+      const items = [...dl.children]
+      let index = 0
+      while (index < items.length) {
+        const dt = items[index]
+        if (dt.tagName !== 'DT') {
+          index++
+          continue
+        }
+        // 收集该分类下的连续 dd
+        const group = [dt]
+        let next = index + 1
+        while (next < items.length && items[next].tagName === 'DD') {
+          group.push(items[next])
+          next++
+        }
+        const matched = !text || group.some(item => (item.textContent ?? '').toLowerCase().includes(text))
+        for (const item of group) item.style.display = matched ? '' : 'none'
+        index = next
+      }
+    }
+
+    watch(keyword, () => {
+      void nextTick(applySearch)
+    })
+    watch(avtiveComponentName, () => {
+      void nextTick(applySearch)
+    })
+
     return {
       tocList,
       avtiveComponentName,
       dom_content_ref,
       toggleTab,
+      keyword,
     }
   },
   // mounted() {
@@ -186,6 +232,26 @@ export default {
   flex-flow: row nowrap;
   height: 100%;
   border-top: var(--color-list-header-border-bottom);
+}
+
+.searchBar {
+  padding: 10px 16px 4px;
+}
+.searchInput {
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--color-font);
+  border: var(--color-list-header-border-bottom);
+  border-radius: @radius-border;
+  background: none;
+  outline: none;
+  &::placeholder {
+    color: var(--color-font-label);
+  }
+  &:focus {
+    border-color: var(--color-primary);
+  }
 }
 
 .toc {

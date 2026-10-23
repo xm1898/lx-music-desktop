@@ -855,5 +855,14 @@
   "setting__basic_source_probe": "檢測音源",
   "setting__basic_source_probing": "檢測中…",
   "setting__basic_source_probe_need_sample": "請先播放一首歌，或往試聽列表裡加一首歌，作為檢測樣本",
-  "setting__basic_source_probe_failed": "檢測失敗"
+  "setting__basic_source_probe_failed": "檢測失敗",
+  "setting__search_placeholder": "搜索設置項",
+  "setting__play_gapless_fade": "切歌漸入漸出",
+  "setting__play_gapless_fade_tip": "切歌時先把舊曲音量漸降、新曲起播後再漸升，消除切換爆音；配合「下一首預加載」效果更好",
+  "setting__play_gapless_off": "關閉",
+  "setting__basic_image_cache": "封面快取",
+  "setting__basic_image_cache_desc": "歌單封面、播放頁封面會快取到本機磁碟，重複開啟不再重新下載；上限 256 MB / 10000 張，超限後自動淘汰最久未使用的圖片。",
+  "setting__basic_image_cache_usage": "目前占用：{count} 張，共 {size}",
+  "setting__basic_image_cache_refresh": "重新整理統計",
+  "setting__basic_image_cache_clear": "清空封面快取"
 }

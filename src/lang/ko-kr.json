@@ -855,5 +855,14 @@
   "setting__basic_source_probe": "소스 검사",
   "setting__basic_source_probing": "검사 중…",
   "setting__basic_source_probe_need_sample": "먼저 곡을 재생하거나 청취 목록에 곡을 추가하여 검사 샘플로 사용하세요",
-  "setting__basic_source_probe_failed": "검사 실패"
+  "setting__basic_source_probe_failed": "검사 실패",
+  "setting__search_placeholder": "설정 검색",
+  "setting__play_gapless_fade": "곡 전환 시 페이드 인/아웃",
+  "setting__play_gapless_fade_tip": "이전 곡을 페이드아웃하고 새 곡을 페이드인하여 전환 팝 노이즈를 줄입니다. 다음 곡 미리 불러오기와 함께 사용하면 더 좋습니다",
+  "setting__play_gapless_off": "끄기",
+  "setting__basic_image_cache": "커버 캐시",
+  "setting__basic_image_cache_desc": "곡 목록 및 플레이어 커버가 로컬 디스크에 캐시되어 다시 열어도 다시 다운로드하지 않습니다. 제한: 256MB / 10000장, 초과 시 가장 오래 사용하지 않은 이미지가 제거됩니다.",
+  "setting__basic_image_cache_usage": "현재 사용량: {count}장, {size}",
+  "setting__basic_image_cache_refresh": "통계 새로고침",
+  "setting__basic_image_cache_clear": "커버 캐시 지우기"
 }

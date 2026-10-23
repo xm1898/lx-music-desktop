@@ -171,6 +171,8 @@ const modules = {
     account_playlist_bindings_save: 'account_playlist_bindings_save',
     account_playlist_bindings_remove: 'account_playlist_bindings_remove',
     account_play_history: 'account_play_history',
+    image_cache_info: 'image_cache_info',
+    image_cache_clear: 'image_cache_clear',
   },
   winLyric: {
     close: 'close',
