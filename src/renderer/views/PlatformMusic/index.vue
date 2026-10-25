@@ -66,9 +66,16 @@ div(:class="$style.container")
     p(v-if="notice" :class="$style.notice") {{ notice }}
     div(:class="$style.section")
       h3(:class="$style.sectionTitle") {{ $t('platform_music_daily') }}
-      div(:class="$style.dailyCard" role="button" tabindex="0" @click="openDaily")
-        span(:class="$style.dailyTitle") {{ $t('platform_music_daily_title') }}
-        span(:class="$style.dailySub") {{ $t('platform_music_daily_sub') }}
+      div(:class="$style.dailyGrid")
+        div(:class="$style.dailyCard" role="button" tabindex="0" @click="openDaily")
+          span(:class="$style.dailyTitle") {{ $t('platform_music_daily_title') }}
+          span(:class="$style.dailySub") {{ $t('platform_music_daily_sub') }}
+        div(:class="$style.dailyCard" role="button" tabindex="0" @click="handleHeartMode")
+          div(:class="$style.dailyTitleRow")
+            svg(:class="$style.heartIcon" viewBox="0 0 24 24" aria-hidden="true")
+              path(d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor")
+            span(:class="$style.dailyTitle") {{ $t('platform_music_heart_mode') }}
+          span(:class="$style.dailySub") {{ $t('platform_music_heart_mode_sub') }}
     div(:class="$style.section")
       h3(:class="$style.sectionTitle") {{ $t('platform_music_my_playlists') }}
       p(v-if="isLoading" :class="$style.tip") {{ $t('platform_music_loading') }}
@@ -139,6 +146,7 @@ import {
   createAccountPlaylist,
   deleteAccountPlaylist,
   getAccountDailySongs,
+  getAccountHeartModeList,
   getAccountPlaylistSongs,
   getAccountPlaylists,
   likeAccountSongs,
@@ -197,6 +205,7 @@ const localLists = ref<LX.List.UserListInfo[]>([])
 const syncStates = ref<Record<string, SyncResult['outcome']>>({})
 
 const PLATFORM_LIST_ID = 'platform_music'
+const HEART_MODE_LIST_ID = 'heart_mode'
 let noticeTimer: ReturnType<typeof setTimeout> | null = null
 
 /** 歌单卡片封面：走磁盘缓存协议，空值 / 加载失败有占位兜底 */
@@ -275,6 +284,23 @@ const openDaily = async() => {
     handleError(err)
   } finally {
     isLoading.value = false
+  }
+}
+
+/** 心动模式：我喜欢的歌 → 相似歌曲拼无限流，进试听列表直接播（绕开风控最狠的官方私人 FM） */
+const heartModeLoading = ref(false)
+const handleHeartMode = async() => {
+  if (!wyAccount.value || heartModeLoading.value) return
+  heartModeLoading.value = true
+  try {
+    const list = await getAccountHeartModeList(wyAccount.value.id)
+    await setTempList(HEART_MODE_LIST_ID, [...list])
+    playList(LIST_IDS.TEMP, 0)
+    showNotice(t('platform_music_heart_mode_started', { count: String(list.length) }))
+  } catch (err) {
+    handleError(err)
+  } finally {
+    heartModeLoading.value = false
   }
 }
 
@@ -764,6 +790,22 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--color-font);
   margin-bottom: 10px;
+}
+.dailyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.dailyTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.heartIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary);
 }
 .dailyCard {
   display: flex;

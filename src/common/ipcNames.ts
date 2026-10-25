@@ -160,6 +160,7 @@ const modules = {
     account_playlist_songs: 'account_playlist_songs',
     account_playlist_ids: 'account_playlist_ids',
     account_daily_songs: 'account_daily_songs',
+    account_heart_mode_list: 'account_heart_mode_list',
     account_playlist_create: 'account_playlist_create',
     account_playlist_update: 'account_playlist_update',
     account_playlist_delete: 'account_playlist_delete',

@@ -74,6 +74,12 @@ export default () => {
     return providers[session.source].getDailySongs(session)
   })
 
+  mainHandle<{ accountId: string, seedSongId?: string }, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_heart_mode_list, async({ params }) => {
+    const session = sessions.getSession(params.accountId)
+    if (!session) throw new Error('账号登录状态不存在或已失效')
+    return providers[session.source].getHeartModeList(session, params.seedSongId)
+  })
+
   const requireSession = (accountId: string): LX.Account.LoginSession => {
     const session = sessions.getSession(accountId)
     if (!session) throw new Error('账号登录状态不存在或已失效')

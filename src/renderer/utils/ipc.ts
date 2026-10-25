@@ -885,6 +885,12 @@ export const getAccountPlaylistSongs = async(accountId: string, playlistId: stri
 export const getAccountDailySongs = async(accountId: string) => {
   return rendererInvoke<string, LX.Music.MusicInfoOnline[]>(WIN_MAIN_RENDERER_EVENT_NAME.account_daily_songs, accountId)
 }
+export const getAccountHeartModeList = async(accountId: string, seedSongId?: string) => {
+  return rendererInvoke<{ accountId: string, seedSongId?: string }, LX.Music.MusicInfoOnline[]>(
+    WIN_MAIN_RENDERER_EVENT_NAME.account_heart_mode_list,
+    { accountId, seedSongId },
+  )
+}
 export const createAccountPlaylist = async(request: LX.Account.PlaylistCreateRequest) => {
   return rendererInvoke<LX.Account.PlaylistCreateRequest, string>(WIN_MAIN_RENDERER_EVENT_NAME.account_playlist_create, request)
 }

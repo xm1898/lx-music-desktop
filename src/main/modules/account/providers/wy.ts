@@ -357,6 +357,67 @@ export const getDailySongs = async(sessionValue: LX.Account.LoginSession | null)
 
 const WRITE_BATCH_SIZE = 500
 
+/** 网易云「我喜欢的音乐」歌单 specialType */
+const LIKED_PLAYLIST_SPECIAL_TYPE = 5
+
+/** 相似歌曲：以一首歌为种子取相似歌曲（心动模式的基础接口） */
+const getSimilarSongs = async(cookies: Record<string, string>, songId: string, limit = 20): Promise<LX.Music.MusicInfoOnline[]> => {
+  const response = await eapiPost<{ code: number, message?: string, songs?: SongRaw[] }>(
+    '/api/v1/discovery/simiSong',
+    { songid: songId, limit, offset: 0 },
+    cookies,
+  )
+  if (response.statusCode !== 200 || response.body.code !== 200) {
+    throw new Error(getRequestError(response.body.message, '获取相似歌曲失败', response.statusCode, response.body.code))
+  }
+  const list: LX.Music.MusicInfoOnline[] = []
+  for (const item of response.body.songs ?? []) {
+    const info = toMusicInfo(item)
+    if (info.name) list.push(info)
+  }
+  return list
+}
+
+const shuffle = <T>(list: T[]): T[] => {
+  const result = [...list]
+  for (let index = result.length - 1; index > 0; index--) {
+    const target = Math.floor(Math.random() * (index + 1))
+    ;[result[index], result[target]] = [result[target], result[index]]
+  }
+  return result
+}
+
+/**
+ * 心动模式：以「我喜欢的音乐」随机几首为种子取相似歌曲，混合成无限流。
+ * 不走官方「私人 FM」接口（那个风控最狠），用相似歌曲拼，稳定且不会误伤账号。
+ * @param seedSongId 传了就以这首歌为种子，否则从「我喜欢的音乐」里随机挑
+ */
+export const getHeartModeList = async(sessionValue: LX.Account.LoginSession | null, seedSongId?: string, size = 40): Promise<LX.Music.MusicInfoOnline[]> => {
+  const session = requireSession(sessionValue)
+  let seeds: string[]
+  if (seedSongId) {
+    seeds = [String(seedSongId)]
+  } else {
+    const playlists = await getUserPlaylists(sessionValue)
+    const liked = playlists.find(item => item.specialType === LIKED_PLAYLIST_SPECIAL_TYPE)
+    const likedIds = liked ? await getPlaylistTrackIds(session, liked.id) : []
+    if (!likedIds.length) throw new Error('心动模式需要先从网易云音乐收藏几首喜欢的歌')
+    seeds = shuffle(likedIds).slice(0, 3)
+  }
+  const batches = await Promise.all(seeds.map(id => getSimilarSongs(session.cookies, id, 20).catch(() => [])))
+  const seen = new Set<string>()
+  const list: LX.Music.MusicInfoOnline[] = []
+  for (const song of batches.flat()) {
+    const songId = String(song.meta.songId)
+    if (seen.has(songId)) continue
+    seen.add(songId)
+    list.push(song)
+    if (list.length >= size) break
+  }
+  if (!list.length) throw new Error('心动模式获取失败，请稍后重试')
+  return list
+}
+
 const chunk = <T>(list: T[], size: number): T[][] => {
   const result: T[][] = []
   for (let index = 0; index < list.length; index += size) result.push(list.slice(index, index + size))
