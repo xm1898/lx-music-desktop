@@ -259,14 +259,12 @@ export const request = async <T = unknown>(url: string, options: Options = {}): 
       } satisfies Omit<Response<T>, 'body'> as Response<T>
     }
     // console.log(response)
-    // 按响应头判断是否解析 JSON；undici 的响应头键为小写，同时兼容大写写法
-    const contentType = response.headers['content-type'] ?? response.headers['Content-Type']
+    // 无条件尝试 JSON.parse：网易云部分接口（如 music.163.com 普通 api）返回
+    // JSON 正文但 content-type 是 text/plain，按 content-type 判断会漏解析
     let body = (await response.body.text()) as T
-    if (!contentType || contentType.includes(CONTENT_TYPE.json)) {
-      try {
-        body = JSON.parse(body as string) as T
-      } catch {}
-    }
+    try {
+      body = JSON.parse(body as string) as T
+    } catch {}
     return {
       body,
       headers: response.headers,

@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import QRCode from 'qrcode'
 import { eapi } from '@common/utils/neteaseCrypto'
-import { httpFetch } from '@main/utils/request'
+import { httpFetch, type RequestOptions } from '@main/utils/request'
 
 const BASE_URL = 'https://music.163.com'
 const INTERFACE_URL = 'https://interface.music.163.com'
@@ -82,7 +82,7 @@ const createAnonymousCookies = (): Record<string, string> => {
   }
 }
 
-const eapiPost = async<T>(uri: string, data: Record<string, unknown>, cookies: Record<string, string>) => {
+const eapiPost = async<T>(uri: string, data: Record<string, unknown>, cookies: Record<string, string>, fallbackMethod: 'GET' | 'POST' = 'POST') => {
   const header: Record<string, string> = {
     osver: cookies.osver ?? 'Microsoft-Windows-10-Professional-build-19045-64bit',
     deviceId: cookies.deviceId ?? randomBytes(26).toString('hex').toUpperCase(),
@@ -99,7 +99,7 @@ const eapiPost = async<T>(uri: string, data: Record<string, unknown>, cookies: R
   if (cookies.MUSIC_U) header.MUSIC_U = cookies.MUSIC_U
   if (cookies.MUSIC_A) header.MUSIC_A = cookies.MUSIC_A
   const payload = { ...data, e_r: false, header }
-  return httpFetch<T>(`${INTERFACE_URL}${uri.replace(/^\/api/, '/eapi')}`, {
+  const response = await httpFetch<T>(`${INTERFACE_URL}${uri.replace(/^\/api/, '/eapi')}`, {
     method: 'POST',
     headers: {
       'User-Agent': DESKTOP_USER_AGENT,
@@ -107,6 +107,20 @@ const eapiPost = async<T>(uri: string, data: Record<string, unknown>, cookies: R
     },
     form: eapi(uri, payload),
   })
+  // 空响应降级：interface 域对部分账号返回 200 空 body（code 解析为 undefined），
+  // 此时改走 music.163.com 普通接口用同一份参数重试
+  const body = response.body as { code?: number } | null | undefined
+  const isEmptyBody = response.statusCode === 200 && (body == null || typeof body !== 'object' || body.code === undefined)
+  if (!isEmptyBody) return response
+  const plainHeaders = {
+    'User-Agent': USER_AGENT,
+    Cookie: Object.entries(cookies).filter(([key]) => !ignoredCookieKeys.has(key)).map(([key, value]) => `${key}=${value}`).join('; '),
+    Referer: 'https://music.163.com/',
+  }
+  const plainOptions: RequestOptions = fallbackMethod === 'GET'
+    ? { method: 'GET', query: data as unknown as RequestOptions['query'], headers: plainHeaders }
+    : { method: 'POST', form: data as unknown as RequestOptions['form'], headers: plainHeaders }
+  return httpFetch<T>(`${BASE_URL}${uri}`, plainOptions)
 }
 
 const formatPlayCount = (value: number): string => {
@@ -259,6 +273,7 @@ export const getUserPlaylists = async(sessionValue: LX.Account.LoginSession | nu
     '/api/user/playlist',
     { uid: session.tokens.userId, limit: 1000, offset: 0 },
     session.cookies,
+    'GET',
   )
   if (response.statusCode !== 200 || response.body.code !== 200) {
     throw new Error(getRequestError(response.body.message, '获取用户歌单失败', response.statusCode, response.body.code))
@@ -282,6 +297,7 @@ const getPlaylistTrackIds = async(session: LX.Account.LoginSession, playlistId: 
     '/api/v3/playlist/detail',
     { id: playlistId, n: 100000, s: 8 },
     session.cookies,
+    'GET',
   )
   if (response.statusCode !== 200 || response.body.code !== 200) {
     throw new Error(getRequestError(response.body.message, '获取歌单歌曲失败', response.statusCode, response.body.code))
@@ -297,6 +313,7 @@ const getSongDetails = async(ids: string[], cookies: Record<string, string>): Pr
       '/api/v3/song/detail',
       { c: `[${batch.map(id => `{"id":${id}}`).join(',')}]` },
       cookies,
+      'GET',
     )
     if (response.statusCode !== 200 || response.body.code !== 200) {
       throw new Error(getRequestError(response.body.message, '获取歌曲详情失败', response.statusCode, response.body.code))
@@ -328,6 +345,7 @@ export const getDailySongs = async(sessionValue: LX.Account.LoginSession | null)
     '/api/v3/discovery/recommend/songs',
     {},
     session.cookies,
+    'GET',
   )
   if (response.statusCode !== 200 || response.body.code !== 200) {
     throw new Error(getRequestError(response.body.message, '获取每日推荐失败', response.statusCode, response.body.code))
@@ -354,6 +372,7 @@ export const searchSongs = async(sessionValue: LX.Account.LoginSession | null, k
     '/api/cloudsearch/pc',
     { s: text, type: 1, limit, offset: 0, total: true },
     session.cookies,
+    'GET',
   )
   assertOk(response.body, '搜索歌曲失败', response.statusCode)
   return (response.body.result?.songs ?? []).map(toMusicInfo).filter(item => item.name)
