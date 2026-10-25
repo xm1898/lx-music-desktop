@@ -6,6 +6,7 @@ import { getProxy, openDevTools as handleOpenDevTools } from '@main/utils'
 import { mainSend } from '@common/mainIpc'
 import { sendFocus, sendTaskbarButtonClick } from './rendererEvent'
 import { encodePath } from '@common/utils/electron'
+import { MAIN_WINDOW_PARTITION } from '@main/modules/imageCache'
 
 let browserWindow: Electron.BrowserWindow | null = null
 
@@ -79,7 +80,7 @@ export const createWindow = () => {
   const windowSizeInfo = getWindowSizeInfo(global.lx.appSetting['common.windowSizeId'])
 
   const { shouldUseDarkColors, theme } = global.lx.theme
-  const ses = session.fromPartition('persist:win-main')
+  const ses = session.fromPartition(MAIN_WINDOW_PARTITION)
   const proxy = getProxy()
   setSesProxy(ses, proxy?.host, proxy?.port)
 

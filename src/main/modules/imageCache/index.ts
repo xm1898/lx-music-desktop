@@ -7,7 +7,7 @@
  *
  * 淘汰策略：LRU，上限 256 MiB / 10000 张。
  */
-import { app, net, protocol } from 'electron'
+import { app, net, protocol, session } from 'electron'
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile, readdir, unlink, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -15,6 +15,13 @@ import { WIN_MAIN_RENDERER_EVENT_NAME } from '@common/ipcNames'
 import { mainHandle } from '@common/mainIpc'
 
 const SCHEME = 'lximg'
+/**
+ * 主窗口使用的持久化 session partition（创建处：modules/winMain/main.ts）。
+ * protocol.handle 不指定 session 时只作用于默认 session，
+ * 主窗口的 lximg:// 请求会走这个分区，必须单独注册，否则封面请求
+ * 直接 net::ERR_UNKNOWN_URL_SCHEME，静默裂图。
+ */
+export const MAIN_WINDOW_PARTITION = 'persist:win-main'
 const MAX_CACHE_SIZE = 256 * 1024 * 1024
 const MAX_CACHE_COUNT = 10000
 const FETCH_TIMEOUT = 15000
@@ -178,14 +185,29 @@ const handleRequest = async(request: Request): Promise<Response> => {
   }
 }
 
+/** 在指定 session 上注册协议处理器 */
+const registerHandler = (ses: Electron.Session): void => {
+  try {
+    ses.protocol.handle(SCHEME, handleRequest)
+  } catch (err) {
+    console.error('[imageCache] protocol.handle 注册失败:', err)
+  }
+}
+
 /** 注册协议并加载索引，须在 app.whenReady 之后调用 */
 export const initImageCache = async() => {
   if (inited) return
   inited = true
   getCacheDir()
+  // 先注册 handler 再加载索引：消除启动竞态，避免首屏封面请求打到未注册的 scheme
+  // 默认 session（歌词窗 / 迷你播放器 / 用户脚本窗口）
+  registerHandler(session.defaultSession)
+  // 主窗口 persist:win-main 分区
+  registerHandler(session.fromPartition(MAIN_WINDOW_PARTITION))
+  // 兜底：之后新建的 session 也自动注册
+  app.on('session-created', registerHandler)
   await loadIndex()
   await reconcile()
-  protocol.handle(SCHEME, handleRequest)
 }
 
 /** 注册 IPC，供设置页查看与清理缓存 */
